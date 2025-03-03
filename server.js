@@ -1,56 +1,49 @@
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-require('dotenv').config();
+require('dotenv').config(); // Загружаем переменные окружения из .env
+const { Driver, getCredentialsFromEnv } = require('ydb-sdk'); // Импортируем YDB SDK
+const express = require('express'); // Импортируем Express
 
 const app = express();
-app.use(cors());
-app.use(express.json());
+const PORT = process.env.PORT || 3000; // Порт сервера
 
-// Подключение к MongoDB
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log("Connected to MongoDB"))
-  .catch(err => console.error("MongoDB connection error:", err));
-
-const userSchema = new mongoose.Schema({
-  userId: { type: String, unique: true, required: true },
-  accumulatedTime: { type: Number, default: 0 },
-  globalTime: { type: Number, default: 0 },
-  isTimerRunning: { type: Boolean, default: false },
-  lastUpdate: { type: Date, default: Date.now },
+// Настройки YDB
+const driver = new Driver({
+  endpoint: process.env.YDB_ENDPOINT, // Endpoint YDB
+  database: process.env.YDB_DATABASE, // Идентификатор базы данных
+  authService: getCredentialsFromEnv(), // Аутентификация через сервисный аккаунт
 });
 
-const User = mongoose.model('User', userSchema);
-
-// API Endpoints
-app.get('/api/users/:userId', async (req, res) => {
-  console.log("Получен запрос на загрузку данных для пользователя:", req.params.userId);
+// Функция для инициализации подключения к YDB
+async function initYDB() {
   try {
-    const user = await User.findOne({ userId: req.params.userId });
-    if (!user) {
-      return res.status(404).json({ error: 'Пользователь не найден' });
+    if (!await driver.ready(10000)) { // Ожидаем подключения к YDB
+      console.error("Failed to connect to YDB");
+      process.exit(1); // Завершаем процесс, если подключение не удалось
     }
-    res.json(user);
-  } catch (error) {
-    console.error("Ошибка загрузки данных:", error);
-    res.status(500).json({ error: 'Ошибка сервера' });
+    console.log("Connected to YDB"); // Успешное подключение
+  } catch (err) {
+    console.error("YDB connection error:", err);
+    process.exit(1);
   }
-});
+}
 
-app.put('/api/users/:userId', async (req, res) => {
-  console.log("Получен запрос на обновление данных для пользователя:", req.params.userId, req.body);
+// Инициализация YDB
+initYDB();
+
+// Пример маршрута для проверки подключения
+app.get('/', async (req, res) => {
   try {
-    const updatedUser = await User.findOneAndUpdate(
-      { userId: req.params.userId },
-      req.body,
-      { new: true, upsert: true } // Создаем пользователя, если он не существует
-    );
-    res.json(updatedUser);
-  } catch (error) {
-    console.error("Ошибка обновления данных:", error);
-    res.status(400).json({ error: 'Ошибка обновления данных' });
+    await driver.tableClient.withSession(async (session) => {
+      const query = `SELECT 1 AS value`; // Простой тестовый запрос
+      const result = await session.executeQuery(query);
+      res.json(result); // Отправляем результат клиенту
+    });
+  } catch (err) {
+    console.error('YDB query error:', err);
+    res.status(500).send('Internal Server Error');
   }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Сервер запущен на порту ${PORT}`));
+// Запуск сервера
+app.listen(PORT, () => {
+  console.log(`Сервер запущен на порту ${PORT}`);
+});
