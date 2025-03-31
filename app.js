@@ -13,8 +13,8 @@ const referralInput = document.getElementById('referralCode');
 const taskListElement = document.getElementById('taskList');
 const historyButton = document.getElementById('historyButton');
 const levelDisplay = document.getElementById('level');
-let API = 'http://212.113.102.87:3000';
-//let API = 'http://212.113.102.87:3000';
+let API = 'https://sahar.mist.net.ru';
+//let API = 'https://sahar.mist.net.ru';
 
 let currentUser = null;
 let pollingInterval = null;
@@ -126,7 +126,7 @@ function updateTimerDisplay(accumulatedTime, remainingTime, isRunning) {
 
 async function fetchTimerStatus() {
     try {
-        const response = await fetch(`http://212.113.102.87:3000/status/${currentUser}`);
+        const response = await fetch(`https://sahar.mist.net.ru/status/${currentUser}`);
         if (!response.ok) throw new Error('Ошибка при запросе статуса');
         const data = await response.json();
         
@@ -142,7 +142,7 @@ async function fetchTimerStatus() {
 }
 
 async function startTimer() {
-    const response = await fetch('http://212.113.102.87:3000/start', {
+    const response = await fetch('https://sahar.mist.net.ru/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -157,7 +157,7 @@ async function startTimer() {
 }
 
 async function claimTime() {
-    const response = await fetch('http://212.113.102.87:3000/claim', {
+    const response = await fetch('https://sahar.mist.net.ru/claim', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: currentUser }),
@@ -211,7 +211,7 @@ function updateTimerModeButtons() {
 }
 
 async function loadLeaderboard() {
-    const response = await fetch('http://212.113.102.87:3000/leaders');
+    const response = await fetch('https://sahar.mist.net.ru/leaders');
     const leaders = await response.json();
     leaderboardElement.innerHTML = leaders
         .map((user, index) => `
@@ -223,7 +223,7 @@ async function loadLeaderboard() {
 }
 
 async function loadReferrals() {
-    const response = await fetch(`http://212.113.102.87:3000/referrals/${currentUser}`);
+    const response = await fetch(`https://sahar.mist.net.ru/referrals/${currentUser}`);
     const data = await response.json();
     const referralsList = document.getElementById('referrals');
     referralsList.innerHTML = data.referrals
@@ -233,7 +233,7 @@ async function loadReferrals() {
 
 async function loadTasks() {
     try {
-        const response = await fetch(`http://212.113.102.87:3000/status/${currentUser}`);
+        const response = await fetch(`https://sahar.mist.net.ru/status/${currentUser}`);
         const data = await response.json();
 
         taskListElement.innerHTML = `
@@ -282,7 +282,7 @@ async function loadTasks() {
 
 async function loadAchievements() {
     try {
-        const response = await fetch(`http://212.113.102.87:3000/achievements/${currentUser}`);
+        const response = await fetch(`https://sahar.mist.net.ru/achievements/${currentUser}`);
         const data = await response.json();
 
         document.getElementById('noviceStatus').textContent = data.achievements.novice ? i18next.t('completed') : i18next.t('notCompleted');
@@ -305,7 +305,7 @@ async function loadAchievements() {
 
 async function loadHistory() {
     try {
-        const response = await fetch(`http://212.113.102.87:3000/history/${currentUser}`);
+        const response = await fetch(`https://sahar.mist.net.ru/history/${currentUser}`);
         const data = await response.json();
         const historyList = document.getElementById('historyList');
         historyList.innerHTML = data.history
@@ -324,7 +324,7 @@ async function loadHistory() {
 
 async function completeTask(taskType) {
     try {
-        const response = await fetch('http://212.113.102.87:3000/complete-task', {
+        const response = await fetch('https://sahar.mist.net.ru/complete-task', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username: currentUser, taskType }),
@@ -365,7 +365,7 @@ authForm.addEventListener('submit', async (e) => {
     const referralCode = referralInput.value.trim();
     
     if (!username) return alert(i18next.t('enterUsername'));
-    const loginResponse = await fetch('http://212.113.102.87:3000/login', {
+    const loginResponse = await fetch('https://sahar.mist.net.ru/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username }),
@@ -386,7 +386,7 @@ authForm.addEventListener('submit', async (e) => {
         loadLeaderboard();
         showPage(localStorage.getItem('currentPage') || 'home');
     } else {
-        const registerResponse = await fetch('http://212.113.102.87:3000/register', {
+        const registerResponse = await fetch('https://sahar.mist.net.ru/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, referrerCode: referralCode }),
@@ -455,7 +455,7 @@ if (savedUsername) {
 
 async function checkDailyBonus() {
     try {
-        const response = await fetch('http://212.113.102.87:3000/daily-bonus', {
+        const response = await fetch('https://sahar.mist.net.ru/daily-bonus', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username: currentUser }),
