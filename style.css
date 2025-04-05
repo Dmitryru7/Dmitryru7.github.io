@@ -1,331 +1,235 @@
-body {
-    font-family: Arial, sans-serif;
-    background-color: #0e0e0e;
+:root {
+    --tg-theme-bg-color: #1e1e1e;
+    --tg-theme-text-color: #ffffff;
+    --tg-theme-button-color: #2ea6ff;
+    --tg-theme-button-text-color: #ffffff;
+    --tg-theme-secondary-bg-color: #2e2e2e;
+}
+
+* {
+    box-sizing: border-box;
     margin: 0;
     padding: 0;
-    color: #e1e1e1;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--tg-theme-bg-color);
+    color: var(--tg-theme-text-color);
+    line-height: 1.6;
+    padding-bottom: 60px;
 }
 
 .container {
-    padding: 20px;
-    text-align: center;
     max-width: 600px;
     margin: 0 auto;
+    padding: 15px;
 }
 
 .page {
     display: none;
-    background-color: #1e1e1e;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    margin-bottom: 80px;
-    opacity: 0;
-    transition: opacity 0.5s ease-in-out;
+    animation: fadeIn 0.3s ease;
 }
 
 .page.active {
     display: block;
-    opacity: 1;
 }
 
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Таймер */
 #timer {
-    font-size: 3em;
-    margin: 20px 0;
+    font-size: 3rem;
     font-weight: bold;
-    color: #007bff;
-    transition: transform 0.3s ease, color 0.3s ease;
-}
-
-#timer.running {
-    color: #28a745;
-    transform: scale(1.1);
-}
-
-#levelDisplay {
-    font-size: 1.5em;
-    margin: 10px 0;
-    color: #ffcc00;
+    text-align: center;
+    margin: 20px 0;
+    color: var(--tg-theme-button-color);
 }
 
 #globalTimer {
-    font-size: 1.2em;
+    font-size: 1.2rem;
+    text-align: center;
+    margin: 15px 0;
+    color: var(--tg-theme-button-color);
+}
+
+.timer-mode-switcher {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
     margin: 20px 0;
-    color: #28a745;
 }
 
-button {
-    padding: 12px 24px;
-    font-size: 16px;
-    cursor: pointer;
+.timer-mode-switcher button {
+    padding: 10px 20px;
     border: none;
-    background-color: #007bff;
-    color: #fff;
     border-radius: 8px;
-    margin: 10px;
-    transition: background-color 0.3s ease, transform 0.2s ease;
+    background-color: var(--tg-theme-secondary-bg-color);
+    color: var(--tg-theme-text-color);
+    cursor: pointer;
 }
 
-button:hover {
-    background-color: #0056b3;
-    transform: translateY(-2px);
+.timer-mode-switcher button.active {
+    background-color: var(--tg-theme-button-color);
+    color: var(--tg-theme-button-text-color);
+}
+
+/* Кнопки */
+button {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0;
+    border: none;
+    border-radius: 10px;
+    background-color: var(--tg-theme-button-color);
+    color: var(--tg-theme-button-text-color);
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: opacity 0.2s;
 }
 
 button:disabled {
-    background-color: #555;
+    opacity: 0.6;
     cursor: not-allowed;
 }
 
+button.tg-button {
+    background-color: var(--tg-theme-button-color);
+    color: var(--tg-theme-button-text-color);
+}
+
+/* Навигация */
 .navbar {
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
-    background-color: #1e1e1e;
     display: flex;
     justify-content: space-around;
+    background-color: var(--tg-theme-secondary-bg-color);
     padding: 10px 0;
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
-    z-index: 1000;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .navbar button {
     background: none;
-    color: #007bff;
-    border: none;
-    font-size: 16px;
-    padding: 10px;
-    transition: color 0.3s ease, transform 0.2s ease;
-}
-
-.navbar button:hover {
-    color: #0056b3;
-    transform: translateY(-2px);
-}
-
-ul {
-    list-style-type: none;
-    padding: 0;
+    color: var(--tg-theme-text-color);
+    font-size: 0.8rem;
+    text-align: center;
+    padding: 5px;
     margin: 0;
 }
 
-ul li {
-    background-color: #2e2e2e;
-    padding: 10px;
-    margin: 5px 0;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    transition: transform 0.2s ease, background-color 0.3s ease;
+.navbar button i {
+    font-size: 1.4rem;
+    display: block;
+    margin-bottom: 5px;
 }
 
-ul li:hover {
-    transform: translateY(-2px);
+/* Реферальная система */
+.referral-card {
+    background-color: var(--tg-theme-secondary-bg-color);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
 }
 
-#auth-page {
+.referral-stats {
+    margin: 16px 0;
+}
+
+.stat-row {
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100vh;
-    background-color: #1e1e1e;
-}
-
-#auth-form {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-}
-
-#auth-form input {
-    padding: 10px;
-    font-size: 16px;
-    border: 2px solid #007bff;
-    border-radius: 8px;
-    background-color: #2e2e2e;
-    color: #e1e1e1;
-    width: 200px;
-}
-
-.referral-link {
-    background: #2e2e2e;
-    padding: 10px;
-    border-radius: 8px;
+    justify-content: space-between;
     margin: 10px 0;
-    word-break: break-all;
 }
 
-#referralCode {
-    padding: 8px;
-    width: 200px;
-    margin-bottom: 10px;
-    background: #2e2e2e;
-    border: 1px solid #007bff;
-    color: white;
-    border-radius: 4px;
+.highlight {
+    color: var(--tg-theme-button-color);
+    font-weight: bold;
 }
 
-#taskList button {
-    margin-left: 10px;
-    padding: 5px 10px;
-    font-size: 14px;
-    background-color: #28a745;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.3s ease, transform 0.2s ease;
-}
-
-#taskList button:disabled {
-    background-color: #6c757d;
-    cursor: not-allowed;
-}
-
-#taskList button:hover:not(:disabled) {
-    background-color: #218838;
-    transform: translateY(-2px);
-}
-
-#achievementsList {
-    margin-top: 20px;
-}
-
-#achievementsList li {
+.input-group {
     display: flex;
-    align-items: center;
-    gap: 10px;
+    margin: 10px 0;
+}
+
+.input-group input {
+    flex: 1;
     padding: 10px;
-    margin: 5px 0;
-    background-color: #2e2e2e;
-    border-radius: 8px;
-    transition: background-color 0.3s ease, transform 0.2s ease;
+    border: 1px solid var(--tg-theme-button-color);
+    border-radius: 8px 0 0 8px;
+    background-color: var(--tg-theme-secondary-bg-color);
+    color: var(--tg-theme-text-color);
 }
 
-#achievementsList li:hover {
-    transform: translateY(-2px);
+.input-group button {
+    width: auto;
+    padding: 10px 15px;
+    border-radius: 0 8px 8px 0;
 }
 
-.achievement-icon {
-    color: #ffcc00;
-    font-size: 1.5em;
-    transition: transform 0.3s ease;
+.referrals-list {
+    background-color: var(--tg-theme-secondary-bg-color);
+    border-radius: 12px;
+    padding: 16px;
 }
 
-.achievement-completed .achievement-icon {
-    color: #ffffff;
-    transform: scale(1.2);
+.referrals-list ul {
+    list-style: none;
+    max-height: 300px;
+    overflow-y: auto;
 }
 
-.task-completed {
-    background-color: #28a745 !important;
-}
-
-.achievement-completed {
-    background-color: #ffcc00 !important;
-    color: #000;
-}
-
-/* Прогресс-бар */
-.progress-bar {
-    width: 100%;
-    height: 10px;
-    background-color: #444;
-    border-radius: 5px;
-    margin-top: 10px;
-    overflow: hidden;
-}
-
-.progress-bar-fill {
-    height: 100%;
-    background-color: #28a745;
-    border-radius: 5px;
-    transition: width 0.3s ease;
+.referrals-list li {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Уведомления */
-@keyframes slideIn {
-    from {
-        transform: translateY(-100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
-
 .notification {
     position: fixed;
     top: 20px;
     right: 20px;
-    background-color: #28a745;
-    color: white;
-    padding: 10px 20px;
+    padding: 12px 20px;
     border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-    animation: slideIn 0.5s ease-out;
+    background-color: var(--tg-theme-secondary-bg-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    animation: slideIn 0.3s ease;
+    z-index: 1000;
 }
 
-/* Добавляем стили для переключателя языка */
-.language-switcher {
-    margin-top: 20px;
-}
-
-.language-switcher button {
-    padding: 8px 16px;
-    margin: 5px;
-    background-color: #007bff;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-}
-
-.language-switcher button:hover {
-    background-color: #0056b3;
-}
-
-/* Стили для переключателя режимов таймера */
-.timer-mode-switcher {
-    margin: 20px 0;
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-}
-
-.timer-mode-switcher button {
-    padding: 10px 20px;
-    background-color: #007bff;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background-color 0.3s ease, transform 0.2s ease;
-}
-
-.timer-mode-switcher button:hover {
-    background-color: #0056b3;
-    transform: translateY(-2px);
-}
-
-.timer-mode-switcher button.active {
+.notification.success {
     background-color: #28a745;
 }
 
-.timer-mode-switcher button:disabled {
-    background-color: #555;
-    cursor: not-allowed;
-}
-
-/* Добавьте стили для кнопки удаления профиля */
-#deleteProfileButton {
+.notification.error {
     background-color: #dc3545;
-    margin-top: 10px;
 }
 
-#deleteProfileButton:hover {
-    background-color: #c82333;
+@keyframes slideIn {
+    from { transform: translateY(-100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+/* Адаптивность */
+@media (max-width: 480px) {
+    #timer {
+        font-size: 2.5rem;
+    }
+    
+    .navbar button {
+        font-size: 0.7rem;
+    }
+    
+    .navbar button i {
+        font-size: 1.2rem;
+    }
 }
