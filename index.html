@@ -10,89 +10,73 @@
 </head>
 <body>
     <div id="auth-page" class="animate__animated animate__fadeIn">
-        <h1 data-i18n="authTitle">Авторизация</h1>
-        <form id="auth-form">
-            <input type="text" id="username" placeholder="Введите ваш никнейм" required>
-            <button type="button" id="referralToggle" style="margin: 10px 0; font-size: 0.9em;" data-i18n="invitedButton">
-                Меня пригласили
-            </button>
-            <input type="text" id="referralCode" placeholder="Введите код приглашения" style="display: none;">
-            <button type="submit" data-i18n="loginButton">Войти</button>
-        </form>
-        <div class="language-switcher">
-            <button id="switchToRu">Русский</button>
-            <button id="switchToEn">English</button>
-        </div>
+        <h1>Авторизация</h1>
+        <p>Пожалуйста, откройте это приложение через Telegram бота</p>
     </div>
 
     <div id="app-content" class="container" style="display: none;">
-        <div id="home" class="page active animate__animated animate__fadeIn">
-            <h1 data-i18n="homeTitle">Домашняя страница</h1>
-            <div id="timer" class="animate__animated animate__pulse">24:00:00</div>
+        <!-- Главная страница с таймером -->
+        <div id="home" class="page active">
+            <h1>Таймер</h1>
+            <div id="timer">24:00:00</div>
             <div id="levelDisplay">Уровень: <span id="level">1</span></div>
             
-            <!-- Переключатель режимов таймера -->
             <div class="timer-mode-switcher">
                 <button id="switchTo24Hours" class="active">24 часа</button>
                 <button id="switchTo160Hours">160 часов</button>
             </div>
 
-            <button id="claimButton" class="animate__animated animate__bounceIn" data-i18n="startButton">Старт</button>
-            <div id="globalTimer" data-i18n="accumulatedTime">Накоплено: 00:00:00</div>
-            <button id="historyButton" data-i18n="historyButton">История операций</button>
-            <button id="logoutButton" data-i18n="logoutButton">Выйти</button>
+            <button id="claimButton">Старт</button>
+            <div id="globalTimer">Накоплено: 00:00:00</div>
         </div>
 
-        <div id="leaders" class="page animate__animated animate__fadeIn">
-            <h1 data-i18n="leadersTitle">Лидеры</h1>
+        <!-- Страница лидеров -->
+        <div id="leaders" class="page">
+            <h1>Лидеры</h1>
             <ul id="leaderboard"></ul>
         </div>
 
-        <div id="friends" class="page animate__animated animate__fadeIn">
-            <h1 data-i18n="friendsTitle">Друзья</h1>
-            <button id="inviteFriend" data-i18n="getReferralLink">Получить реферальную ссылку</button>
-            <div id="referralLinkDisplay" class="referral-link"></div>
-            <h2 data-i18n="yourReferrals">Ваши рефералы</h2>
-            <ul id="referrals"></ul>
+        <!-- Страница друзей и рефералов -->
+        <div id="friends" class="page">
+            <h1>Друзья</h1>
+            <div id="friends-content"></div>
         </div>
 
-        <div id="tasks" class="page animate__animated animate__fadeIn">
-            <h1 data-i18n="tasksTitle">Задания</h1>
+        <!-- Страница заданий -->
+        <div id="tasks" class="page">
+            <h1>Задания</h1>
             <ul id="taskList"></ul>
-
-            <h2 data-i18n="achievementsTitle">Достижения</h2>
+            
+            <h2>Достижения</h2>
             <ul id="achievementsList">
                 <li>
                     <i class="fas fa-star achievement-icon"></i>
-                    <span data-i18n="noviceAchievement">Новичок</span>
+                    <span>Новичок</span>
                     <span id="noviceStatus">Не выполнено</span>
                 </li>
                 <li>
                     <i class="fas fa-clock achievement-icon"></i>
-                    <span data-i18n="timeMasterAchievement">Мастер времени</span>
+                    <span>Мастер времени</span>
                     <span id="timeMasterStatus">Не выполнено</span>
                 </li>
                 <li>
                     <i class="fas fa-users achievement-icon"></i>
-                    <span data-i18n="socialMagnetAchievement">Социальный магнат</span>
+                    <span>Социальный магнат</span>
                     <span id="socialMagnetStatus">Не выполнено</span>
                 </li>
             </ul>
         </div>
 
-        <div id="history" class="page animate__animated animate__fadeIn">
-            <h1 data-i18n="historyTitle">История операций</h1>
-            <ul id="historyList"></ul>
-        </div>
-
+        <!-- Навигационное меню -->
         <nav class="navbar">
-            <button data-page="home"><i class="fas fa-home"></i><br><span data-i18n="homeNav">Домашняя</span></button>
-            <button data-page="leaders"><i class="fas fa-trophy"></i><br><span data-i18n="leadersNav">Лидеры</span></button>
-            <button data-page="friends"><i class="fas fa-users"></i><br><span data-i18n="friendsNav">Друзья</span></button>
-            <button data-page="tasks"><i class="fas fa-tasks"></i><br><span data-i18n="tasksNav">Задания</span></button>
+            <button data-page="home"><i class="fas fa-home"></i><br>Таймер</button>
+            <button data-page="leaders"><i class="fas fa-trophy"></i><br>Лидеры</button>
+            <button data-page="friends"><i class="fas fa-users"></i><br>Друзья</button>
+            <button data-page="tasks"><i class="fas fa-tasks"></i><br>Задания</button>
         </nav>
     </div>
-    <script src="https://unpkg.com/i18next/dist/umd/i18next.min.js"></script>
+
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
