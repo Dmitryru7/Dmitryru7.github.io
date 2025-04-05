@@ -252,7 +252,7 @@ async function loadFriendsPage() {
                 <div class="referral-link-section">
                     <p>Ваша реферальная ссылка:</p>
                     <div class="input-group">
-                        <input type="text" id="referralLink" value="https://t.me/bigdik30ccm_bot?startapp=ref_${data.referralCode}" readonly>
+                        <input type="text" id="referralLink" value="https://t.me/bigdik30cm_bot?startapp=ref_${data.referralCode}" readonly>
                         <button onclick="copyReferralLink()">Копировать</button>
                     </div>
                     <button onclick="shareReferralLink()" class="tg-button">
