@@ -4,75 +4,101 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NotTime App</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
 </head>
 <body>
-    <div id="auth-page" class="animate__animated animate__fadeIn">
-        <h1>Авторизация</h1>
-        <p>Пожалуйста, откройте это приложение через Telegram бота</p>
+    <div id="auth-page">
+        <div class="auth-container">
+            <h1>NotTime</h1>
+            <p>Пожалуйста, откройте приложение через мобильную версию Telegram</p>
+            <div class="desktop-options">
+                <a href="https://web.telegram.org/" target="_blank" class="tg-button">
+                    <i class="fab fa-telegram"></i> Web Telegram
+                </a>
+                <button onclick="location.reload()" class="tg-button secondary">
+                    <i class="fas fa-sync-alt"></i> Обновить
+                </button>
+            </div>
+        </div>
     </div>
 
-    <div id="app-content" class="container" style="display: none;">
-        <!-- Главная страница с таймером -->
+    <div id="app-content" class="container">
+        <!-- Главная страница -->
         <div id="home" class="page active">
-            <h1>Таймер</h1>
-            <div id="timer">24:00:00</div>
-            <div id="levelDisplay">Уровень: <span id="level">1</span></div>
-            
-            <div class="timer-mode-switcher">
-                <button id="switchTo24Hours" class="active">24 часа</button>
-                <button id="switchTo160Hours">160 часов</button>
+            <div class="timer-card">
+                <div id="timer" class="timer-display">24:00:00</div>
+                <div class="progress-container">
+                    <div id="timerProgress" class="progress-bar"></div>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <span class="stat-label">Накоплено</span>
+                        <div id="globalTimer" class="stat-value">00:00:00</div>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">Уровень</span>
+                        <div id="level" class="stat-value">1</div>
+                    </div>
+                </div>
+                
+                <div class="mode-switcher">
+                    <button id="switchTo24Hours" class="mode-button active">24 ч</button>
+                    <button id="switchTo160Hours" class="mode-button">160 ч</button>
+                </div>
+                
+                <button id="claimButton" class="action-button primary">
+                    <i class="fas fa-play"></i> Старт
+                </button>
             </div>
-
-            <button id="claimButton">Старт</button>
-            <div id="globalTimer">Накоплено: 00:00:00</div>
         </div>
 
-        <!-- Страница лидеров -->
+        <!-- Лидеры -->
         <div id="leaders" class="page">
-            <h1>Лидеры</h1>
-            <ul id="leaderboard"></ul>
+            <div class="card">
+                <h2><i class="fas fa-trophy"></i> Топ игроков</h2>
+                <ul id="leaderboard" class="leader-list"></ul>
+            </div>
         </div>
 
-        <!-- Страница друзей и рефералов -->
+        <!-- Друзья -->
         <div id="friends" class="page">
-            <h1>Друзья</h1>
-            <div id="friends-content"></div>
+            <div class="card">
+                <h2><i class="fas fa-users"></i> Рефералы</h2>
+                <div id="friends-content"></div>
+            </div>
         </div>
 
-        <!-- Страница заданий -->
+        <!-- Задания -->
         <div id="tasks" class="page">
-            <h1>Задания</h1>
-            <ul id="taskList"></ul>
-            
-            <h2>Достижения</h2>
-            <ul id="achievementsList">
-                <li>
-                    <i class="fas fa-star achievement-icon"></i>
-                    <span>Новичок</span>
-                    <span id="noviceStatus">Не выполнено</span>
-                </li>
-                <li>
-                    <i class="fas fa-clock achievement-icon"></i>
-                    <span>Мастер времени</span>
-                    <span id="timeMasterStatus">Не выполнено</span>
-                </li>
-                <li>
-                    <i class="fas fa-users achievement-icon"></i>
-                    <span>Социальный магнат</span>
-                    <span id="socialMagnetStatus">Не выполнено</span>
-                </li>
-            </ul>
+            <div class="card">
+                <h2><i class="fas fa-tasks"></i> Задания</h2>
+                <ul id="taskList" class="task-list"></ul>
+                
+                <h3><i class="fas fa-star"></i> Достижения</h3>
+                <ul id="achievementsList" class="achievements-list"></ul>
+            </div>
         </div>
 
-        <!-- Навигационное меню -->
+        <!-- Навигация -->
         <nav class="navbar">
-            <button data-page="home"><i class="fas fa-home"></i><br>Таймер</button>
-            <button data-page="leaders"><i class="fas fa-trophy"></i><br>Лидеры</button>
-            <button data-page="friends"><i class="fas fa-users"></i><br>Друзья</button>
-            <button data-page="tasks"><i class="fas fa-tasks"></i><br>Задания</button>
+            <button data-page="home" class="nav-button active">
+                <i class="fas fa-clock"></i>
+                <span>Таймер</span>
+            </button>
+            <button data-page="leaders" class="nav-button">
+                <i class="fas fa-trophy"></i>
+                <span>Лидеры</span>
+            </button>
+            <button data-page="friends" class="nav-button">
+                <i class="fas fa-users"></i>
+                <span>Друзья</span>
+            </button>
+            <button data-page="tasks" class="nav-button">
+                <i class="fas fa-tasks"></i>
+                <span>Задания</span>
+            </button>
         </nav>
     </div>
 
