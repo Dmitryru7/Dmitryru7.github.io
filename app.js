@@ -145,10 +145,29 @@ function updateTelegramTheme() {
 // Загрузка данных пользователя
 async function loadUserData() {
     try {
-        const [status, leaders] = await Promise.all([
-            fetch(`${API}/status/${currentUser.username}`).then(r => r.json()),
-            fetch(`${API}/leaders`).then(r => r.json())
-        ]);
+        let status, leaders;
+
+try {
+  const statusPromise = fetch(`${API}/status/${currentUser.username}`)
+    .then(response => {
+      if (!response.ok) throw new Error('Ошибка статуса');
+      return response.json();
+    });
+    
+  const leadersPromise = fetch(`${API}/leaders`)
+    .then(response => {
+      if (!response.ok) throw new Error('Ошибка списка лидеров');
+      return response.json();
+    });
+
+  status = await statusPromise;
+  leaders = await leadersPromise;
+  
+} catch (error) {
+  console.error('Ошибка:', error.message);
+  showNotification(error.message, 'error');
+  return;
+}
         
         updateTimerDisplay(
             status.accumulatedTime,
