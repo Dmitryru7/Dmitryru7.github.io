@@ -204,7 +204,9 @@ function formatTime(ms) {
 function updateTimerDisplay(accumulatedTime, remainingTime, isRunning) {
     if (isRunning) {
         const totalTime = TIMER_DURATIONS[currentTimerMode];
+        console.log(totalTime);
         const progress = ((totalTime - remainingTime) / totalTime) * 100;
+        console.log(progress);
         timerProgress.style.width = `${progress}%`;
         
         timerElement.textContent = formatTime(remainingTime);
