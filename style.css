@@ -233,3 +233,89 @@ button.tg-button {
         font-size: 1.2rem;
     }
 }
+
+/* Новые стили для рефералов */
+.referral-card, .stats-card, .referrals-card {
+    background: var(--tg-theme-secondary-bg-color);
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.input-group {
+    display: flex;
+    margin: 10px 0;
+}
+
+.input-group input {
+    flex: 1;
+    padding: 10px;
+    border-radius: 8px 0 0 8px;
+    border: none;
+    background: rgba(255,255,255,0.1);
+    color: var(--tg-theme-text-color);
+}
+
+.copy-button {
+    padding: 10px 15px;
+    background: var(--tg-theme-button-color);
+    color: var(--tg-theme-button-text-color);
+    border: none;
+    border-radius: 0 8px 8px 0;
+    cursor: pointer;
+}
+
+.referrals-list {
+    list-style: none;
+    margin-top: 10px;
+}
+
+.referrals-list li {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    margin: 10px 0;
+}
+
+/* Стили для таблицы лидеров */
+.leader-list {
+    list-style: none;
+}
+
+.leader-list li {
+    display: flex;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.leader-position {
+    width: 30px;
+    font-weight: bold;
+    color: var(--tg-theme-button-color);
+}
+
+.leader-name {
+    flex: 1;
+    margin: 0 10px;
+}
+
+.leader-time {
+    font-family: monospace;
+}
+
+.empty, .error {
+    text-align: center;
+    padding: 20px;
+    color: var(--tg-theme-hint-color);
+}
+
+.error {
+    color: #ff6b6b;
+}
