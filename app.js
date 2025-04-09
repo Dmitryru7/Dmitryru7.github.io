@@ -402,12 +402,12 @@ function generateReferralLink() {
     
     if (window.Telegram?.WebApp) {
         const tg = Telegram.WebApp;
-        const botUsername = tg.initDataUnsafe.user?.username || 'your_bot';
+        const botUsername = tg.initDataUnsafe.user?.username || 'bigdik30cm_bot';
         const startParam = `ref_${currentUser.referralCode}`;
         return `https://t.me/${botUsername}?startapp=${startParam}`;
     }
     
-    return `https://t.me/your_bot?start=ref_${currentUser.referralCode}`;
+    return `https://t.me/bigdik30cm_bot?start=ref_${currentUser.referralCode}`;
 }
 
 // Получение реферального бонуса
