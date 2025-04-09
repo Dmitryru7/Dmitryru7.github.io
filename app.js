@@ -4,9 +4,13 @@ const API = 'https://sahar.mist.net.ru'; // Замените на ваш API URL
 const authPage = document.getElementById('auth-page');
 const appContent = document.getElementById('app-content');
 const timerElement = document.getElementById('timer');
+const timerProgress = document.getElementById('timerProgress');
 const claimButton = document.getElementById('claimButton');
 const globalTimerElement = document.getElementById('globalTimer');
-const navbarButtons = document.querySelectorAll('.navbar button');
+const levelElement = document.getElementById('level');
+const navbarButtons = document.querySelectorAll('.nav-button');
+const switchTo24Hours = document.getElementById('switchTo24Hours');
+const switchTo160Hours = document.getElementById('switchTo160Hours');
 
 let currentUser = null;
 let pollingInterval = null;
@@ -18,20 +22,68 @@ const TIMER_DURATIONS = {
 
 // Инициализация приложения
 document.addEventListener('DOMContentLoaded', async () => {
+    checkPlatform();
+    
     if (window.Telegram?.WebApp) {
         await initTelegramApp();
     } else {
         showAuthPage();
     }
+    
+    // Инициализация переключателя режимов таймера
+    switchTo24Hours.addEventListener('click', () => {
+        currentTimerMode = '24Hours';
+        updateTimerModeButtons();
+        if (!isTimerRunning()) {
+            timerElement.textContent = '24:00:00';
+        }
+    });
+    
+    switchTo160Hours.addEventListener('click', () => {
+        currentTimerMode = '160Hours';
+        updateTimerModeButtons();
+        if (!isTimerRunning()) {
+            timerElement.textContent = '160:00:00';
+        }
+    });
+    
+    // Инициализация навигации
+    navbarButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            showPage(button.dataset.page);
+            navbarButtons.forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+        });
+    });
 });
+
+// Проверка платформы
+function checkPlatform() {
+    const isMobile = /Android|iPhone|iPad|iPod|Windows Phone/i.test(navigator.userAgent);
+    if (!isMobile && !window.Telegram?.WebApp) {
+        document.body.classList.add('desktop');
+    }
+}
+
+// Показать страницу авторизации
+function showAuthPage() {
+    authPage.style.display = 'flex';
+    appContent.style.display = 'none';
+}
 
 // Инициализация Telegram WebApp
 async function initTelegramApp() {
     try {
         const tgWebApp = Telegram.WebApp;
+        
+        // Инициализация WebApp
         tgWebApp.expand();
         tgWebApp.enableClosingConfirmation();
         
+        // Настройка темы
+        updateTelegramTheme();
+        
+        // Авторизация
         const response = await fetch(`${API}/tg-auth`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -41,23 +93,27 @@ async function initTelegramApp() {
             })
         });
         
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message);
-
-        currentUser = data.user.username;
-        localStorage.setItem('username', currentUser);
+        if (!response.ok) {
+            throw new Error('Ошибка авторизации');
+        }
         
+        const data = await response.json();
+        currentUser = data.user;
+        
+        // Показываем интерфейс приложения
         authPage.style.display = 'none';
         appContent.style.display = 'block';
         
-        initApp();
-        updateTelegramTheme();
+        // Загружаем данные пользователя
+        loadUserData();
         
+        // Показываем приветственное сообщение для новых пользователей
         if (data.user.isNewUser) {
             showNotification('Добро пожаловать в NotTime!', 'success');
         }
+        
     } catch (error) {
-        console.error('Telegram init error:', error);
+        console.error('Ошибка инициализации Telegram:', error);
         showAuthPage();
     }
 }
@@ -81,44 +137,16 @@ function updateTelegramTheme() {
     document.documentElement.style.setProperty(
         '--tg-theme-secondary-bg-color', Telegram.WebApp.themeParams.secondary_bg_color || '#2e2e2e'
     );
-}
-
-// Инициализация основного функционала
-function initApp() {
-    // Загрузка данных пользователя
-    loadUserData();
-    
-    // Настройка навигации
-    navbarButtons.forEach(button => {
-        button.addEventListener('click', () => showPage(button.dataset.page));
-    });
-    
-    // Настройка таймера
-    document.getElementById('switchTo24Hours').addEventListener('click', () => {
-        currentTimerMode = '24Hours';
-        updateTimerModeButtons();
-        timerElement.textContent = '24:00:00';
-    });
-    
-    document.getElementById('switchTo160Hours').addEventListener('click', () => {
-        currentTimerMode = '160Hours';
-        updateTimerModeButtons();
-        timerElement.textContent = '160:00:00';
-    });
-    
-    claimButton.addEventListener('click', () => {
-        claimButton.textContent === 'Забрать' ? claimTime() : startTimer();
-    });
-    
-    // Показываем сохраненную страницу или домашнюю
-    showPage(localStorage.getItem('currentPage') || 'home');
+    document.documentElement.style.setProperty(
+        '--tg-theme-hint-color', Telegram.WebApp.themeParams.hint_color || '#aaaaaa'
+    );
 }
 
 // Загрузка данных пользователя
 async function loadUserData() {
     try {
         const [status, leaders] = await Promise.all([
-            fetch(`${API}/status/${currentUser}`).then(r => r.json()),
+            fetch(`${API}/status/${currentUser.username}`).then(r => r.json()),
             fetch(`${API}/leaders`).then(r => r.json())
         ]);
         
@@ -133,64 +161,99 @@ async function loadUserData() {
         }
         
         updateLeaderboard(leaders);
-        loadTasks();
+        updateLevel(status.level || 1);
+        
+        // Показываем домашнюю страницу
+        showPage('home');
+        
     } catch (error) {
-        console.error('Error loading user data:', error);
+        console.error('Ошибка загрузки данных:', error);
+        showNotification('Ошибка загрузки данных', 'error');
     }
 }
 
-// Таймер и его отображение
-function formatTime(milliseconds) {
-    const totalSeconds = Math.floor(milliseconds / 1000);
+// Форматирование времени
+function formatTime(ms) {
+    const totalSeconds = Math.floor(ms / 1000);
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
+// Обновление отображения таймера
 function updateTimerDisplay(accumulatedTime, remainingTime, isRunning) {
     if (isRunning) {
+        const totalTime = TIMER_DURATIONS[currentTimerMode];
+        const progress = ((totalTime - remainingTime) / totalTime) * 100;
+        timerProgress.style.width = `${progress}%`;
+        
         timerElement.textContent = formatTime(remainingTime);
-        claimButton.textContent = 'Забрать';
-        claimButton.disabled = remainingTime > 0;
+        timerElement.classList.add('running');
+        claimButton.innerHTML = '<i class="fas fa-stop"></i> Забрать';
         disableTimerModeSwitcher();
     } else {
+        timerProgress.style.width = '0%';
         timerElement.textContent = currentTimerMode === '24Hours' ? '24:00:00' : '160:00:00';
-        claimButton.textContent = 'Старт';
-        claimButton.disabled = false;
+        timerElement.classList.remove('running');
+        claimButton.innerHTML = '<i class="fas fa-play"></i> Старт';
         enableTimerModeSwitcher();
     }
-    globalTimerElement.textContent = `Накоплено: ${formatTime(accumulatedTime)}`;
+    
+    globalTimerElement.textContent = formatTime(accumulatedTime);
 }
 
-// Работа с таймером
+// Обновление таблицы лидеров
+function updateLeaderboard(leaders) {
+    const leaderboard = document.getElementById('leaderboard');
+    leaderboard.innerHTML = leaders && leaders.length > 0
+        ? leaders.map((user, index) => `
+            <li>
+                <span class="leader-position">${index + 1}.</span>
+                <span class="leader-name">${user.username || 'Аноним'}</span>
+                <span class="leader-time">${formatTime(user.accumulatedTime || 0)}</span>
+            </li>
+        `).join('')
+        : '<li class="empty">Пока никто не участвовал</li>';
+}
+
+// Обновление уровня
+function updateLevel(level) {
+    levelElement.textContent = level;
+}
+
+// Запуск таймера
 async function startTimer() {
     try {
         const response = await fetch(`${API}/start`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
-                username: currentUser,
+                username: currentUser.username,
                 duration: TIMER_DURATIONS[currentTimerMode]
             }),
         });
         
         if (response.ok) {
             startPolling();
-            disableTimerModeSwitcher();
             showNotification('Таймер запущен!', 'success');
+            triggerHapticFeedback('light');
+        } else {
+            throw new Error('Ошибка сервера');
         }
     } catch (error) {
+        console.error('Ошибка запуска таймера:', error);
         showNotification('Ошибка запуска таймера', 'error');
     }
 }
 
+// Завершение таймера
 async function claimTime() {
     try {
         const response = await fetch(`${API}/claim`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: currentUser }),
+            body: JSON.stringify({ username: currentUser.username }),
         });
         
         if (response.ok) {
@@ -198,86 +261,188 @@ async function claimTime() {
             clearInterval(pollingInterval);
             updateTimerDisplay(data.accumulatedTime, 0, false);
             showNotification(`Получено ${formatTime(data.earned)}!`, 'success');
+            triggerHapticFeedback('success');
             loadUserData();
+        } else {
+            throw new Error('Ошибка сервера');
         }
     } catch (error) {
-        showNotification('Ошибка получения времени', 'error');
+        console.error('Ошибка завершения таймера:', error);
+        showNotification('Ошибка завершения таймера', 'error');
     }
 }
 
+// Опрос статуса таймера
 function startPolling() {
     if (pollingInterval) clearInterval(pollingInterval);
     pollingInterval = setInterval(async () => {
-        const status = await fetch(`${API}/status/${currentUser}`).then(r => r.json());
-        updateTimerDisplay(
-            status.accumulatedTime,
-            status.remainingTime,
-            status.isRunning
-        );
+        try {
+            const status = await fetch(`${API}/status/${currentUser.username}`).then(r => r.json());
+            updateTimerDisplay(
+                status.accumulatedTime,
+                status.remainingTime,
+                status.isRunning
+            );
+            
+            if (!status.isRunning) {
+                clearInterval(pollingInterval);
+            }
+        } catch (error) {
+            console.error('Ошибка опроса:', error);
+            clearInterval(pollingInterval);
+        }
     }, 1000);
 }
 
-// Реферальная система
+// Переключение страниц
+function showPage(pageId) {
+    document.querySelectorAll('.page').forEach(page => {
+        page.classList.remove('active');
+    });
+    
+    document.getElementById(pageId).classList.add('active');
+    localStorage.setItem('currentPage', pageId);
+    
+    // Загружаем данные для страницы
+    if (pageId === 'friends') {
+        loadFriendsPage();
+    } else if (pageId === 'tasks') {
+        loadTasksPage();
+    }
+}
+
+// Загрузка страницы друзей
 async function loadFriendsPage() {
     try {
-        const response = await fetch(`${API}/referrals/${currentUser}`);
+        const response = await fetch(`${API}/referrals/${currentUser.username}`);
+        if (!response.ok) throw new Error('Ошибка загрузки');
+        
         const data = await response.json();
-        
-        let referrerInfo = '';
-        if (data.referrer) {
-            referrerInfo = `<p>Вас пригласил: <strong>${data.referrer}</strong></p>`;
-        }
-        
-        const nextClaimTime = data.nextClaimIn ? 
-            formatSeconds(data.nextClaimIn) : 'Готово к получению';
-        
-        document.getElementById('friends-content').innerHTML = `
-            <div class="referral-card">
-                <h3>Реферальная программа</h3>
-                ${referrerInfo}
-                <div class="referral-stats">
-                    <div class="stat-row">
-                        <span>Доступно:</span>
-                        <span class="highlight">${formatTime(data.pendingBonus)}</span>
-                    </div>
-                    <div class="stat-row">
-                        <span>Всего получено:</span>
-                        <span>${formatTime(data.totalEarned)}</span>
-                    </div>
-                    <button id="claimBonusBtn" class="tg-button" ${data.canClaim ? '' : 'disabled'}>
-                        ${data.canClaim ? 'Получить 10%' : `Доступно через: ${nextClaimTime}`}
-                    </button>
+        renderFriendsPage(data);
+    } catch (error) {
+        console.error('Ошибка загрузки друзей:', error);
+        showNotification('Ошибка загрузки друзей', 'error');
+    }
+}
+
+// Отображение страницы друзей
+function renderFriendsPage(data) {
+    const friendsContent = document.getElementById('friends-content');
+    
+    let referrerInfo = '';
+    if (data.referrer) {
+        referrerInfo = `
+            <div class="info-box">
+                <i class="fas fa-user-plus"></i>
+                <span>Вас пригласил: <strong>${data.referrer}</strong></span>
+            </div>
+        `;
+    }
+    
+    const nextClaimTime = data.nextClaimIn ? 
+        formatSeconds(data.nextClaimIn) : 'Готово к получению';
+    
+    friendsContent.innerHTML = `
+        <div class="referral-stats">
+            ${referrerInfo}
+            
+            <div class="stats-row">
+                <div class="stat-box">
+                    <span class="stat-label">Доступно</span>
+                    <span class="stat-value highlight">${formatTime(data.pendingBonus)}</span>
                 </div>
-                
-                <div class="referral-link-section">
-                    <p>Ваша реферальная ссылка:</p>
-                    <div class="input-group">
-                        <input type="text" id="referralLink" value="https://t.me/bigdik30cm_bot?startapp=ref_${data.referralCode}" readonly>
-                        <button onclick="copyReferralLink()">Копировать</button>
-                    </div>
-                    <button onclick="shareReferralLink()" class="tg-button">
-                        <i class="fas fa-share-alt"></i> Поделиться
-                    </button>
+                <div class="stat-box">
+                    <span class="stat-label">Всего получено</span>
+                    <span class="stat-value">${formatTime(data.totalEarned)}</span>
                 </div>
             </div>
             
-            <div class="referrals-list">
-                <h4>Ваши рефералы (${data.referrals.length})</h4>
-                <ul>
-                    ${data.referrals.map(ref => `
-                        <li>
-                            <span>${ref.username}</span>
-                            <span>+${formatTime(ref.earned)}</span>
-                        </li>
-                    `).join('')}
-                </ul>
-            </div>
-        `;
+            <button id="claimBonusBtn" class="action-button primary" ${data.canClaim ? '' : 'disabled'}>
+                <i class="fas fa-coins"></i>
+                ${data.canClaim ? 'Получить 10%' : `Доступно через: ${nextClaimTime}`}
+            </button>
+        </div>
         
-        document.getElementById('claimBonusBtn')?.addEventListener('click', claimReferralBonus);
-    } catch (error) {
-        console.error('Error loading friends page:', error);
+        <div class="referral-link-section">
+            <h3><i class="fas fa-link"></i> Ваша реферальная ссылка</h3>
+            <div class="input-group">
+                <input type="text" id="referralLink" value="${generateReferralLink()}" readonly>
+                <button onclick="copyReferralLink()" class="action-button">
+                    <i class="fas fa-copy"></i>
+                </button>
+            </div>
+            <button onclick="shareReferralLink()" class="action-button secondary">
+                <i class="fas fa-share-alt"></i> Поделиться
+            </button>
+        </div>
+        
+        <div class="referrals-list">
+            <h3><i class="fas fa-users"></i> Ваши рефералы (${data.referrals.length})</h3>
+            <ul>
+                ${data.referrals.map(ref => `
+                    <li class="referral-item">
+                        <div class="user-info">
+                            <div class="user-avatar">${ref.username.charAt(0).toUpperCase()}</div>
+                            <span>${ref.username}</span>
+                        </div>
+                        <span class="referral-bonus">+${formatTime(ref.earned)}</span>
+                    </li>
+                `).join('')}
+            </ul>
+        </div>
+    `;
+    
+    // Назначаем обработчик кнопки получения бонуса
+    document.getElementById('claimBonusBtn')?.addEventListener('click', claimReferralBonus);
+}
+
+// Генерация реферальной ссылки
+function generateReferralLink() {
+    if (!currentUser?.referralCode) return '';
+    
+    if (window.Telegram?.WebApp) {
+        const tg = Telegram.WebApp;
+        const botUsername = tg.initDataUnsafe.user?.username || 'your_bot';
+        const startParam = `ref_${currentUser.referralCode}`;
+        return `https://t.me/${botUsername}?startapp=${startParam}`;
     }
+    
+    return `https://t.me/your_bot?start=ref_${currentUser.referralCode}`;
+}
+
+// Получение реферального бонуса
+async function claimReferralBonus() {
+    try {
+        const response = await fetch(`${API}/claim-referral-bonus`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: currentUser.username })
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            showNotification(`Получено +${formatTime(result.bonus)}!`, 'success');
+            triggerHapticFeedback('success');
+            loadFriendsPage();
+            loadUserData();
+        } else {
+            throw new Error('Ошибка сервера');
+        }
+    } catch (error) {
+        console.error('Ошибка получения бонуса:', error);
+        showNotification('Ошибка получения бонуса', 'error');
+    }
+}
+
+// Вспомогательные функции
+function getReferralCodeFromUrl() {
+    if (window.Telegram?.WebApp) {
+        const startParam = Telegram.WebApp.initDataUnsafe.start_param;
+        if (startParam && startParam.startsWith('ref_')) {
+            return startParam.substring(4);
+        }
+    }
+    return null;
 }
 
 function formatSeconds(seconds) {
@@ -287,90 +452,57 @@ function formatSeconds(seconds) {
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 }
 
-async function claimReferralBonus() {
-    try {
-        const response = await fetch(`${API}/claim-referral-bonus`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: currentUser })
-        });
-        
-        const result = await response.json();
-        
-        if (response.ok) {
-            showNotification(`Получено +${formatTime(result.bonus)}!`, 'success');
-            loadFriendsPage();
-            
-            if (window.Telegram?.WebApp) {
-                Telegram.WebApp.HapticFeedback.notificationOccurred('success');
-            }
-        } else {
-            showNotification(result.message, 'error');
-        }
-    } catch (error) {
-        showNotification('Ошибка при получении бонуса', 'error');
+function isTimerRunning() {
+    return timerElement.classList.contains('running');
+}
+
+function updateTimerModeButtons() {
+    const buttons = {
+        '24Hours': switchTo24Hours,
+        '160Hours': switchTo160Hours
+    };
+    
+    Object.values(buttons).forEach(btn => btn.classList.remove('active'));
+    buttons[currentTimerMode].classList.add('active');
+}
+
+function disableTimerModeSwitcher() {
+    switchTo24Hours.disabled = true;
+    switchTo160Hours.disabled = true;
+}
+
+function enableTimerModeSwitcher() {
+    switchTo24Hours.disabled = false;
+    switchTo160Hours.disabled = false;
+}
+
+function triggerHapticFeedback(type) {
+    if (window.Telegram?.WebApp?.HapticFeedback) {
+        Telegram.WebApp.HapticFeedback.impactOccurred(type);
     }
 }
 
-function copyReferralLink() {
+// Глобальные функции для использования в HTML
+window.copyReferralLink = function() {
     const input = document.getElementById('referralLink');
     input.select();
     document.execCommand('copy');
     showNotification('Ссылка скопирована!', 'success');
-    
-    if (window.Telegram?.WebApp) {
-        Telegram.WebApp.HapticFeedback.impactOccurred('light');
-    }
-}
+    triggerHapticFeedback('light');
+};
 
-function shareReferralLink() {
+window.shareReferralLink = function() {
     if (window.Telegram?.WebApp) {
         Telegram.WebApp.shareUrl(
             document.getElementById('referralLink').value,
             'Присоединяйся к NotTime и получай бонусы!'
         );
     } else {
-        copyReferralLink();
+        window.copyReferralLink();
     }
-}
+};
 
-// Вспомогательные функции
-function getReferralCodeFromUrl() {
-    const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get('ref');
-}
-
-function showPage(pageId) {
-    document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
-    document.getElementById(pageId).classList.add('active');
-    localStorage.setItem('currentPage', pageId);
-    
-    if (pageId === 'friends') {
-        loadFriendsPage();
-    } else if (pageId === 'tasks') {
-        loadTasks();
-    }
-}
-
-function updateTimerModeButtons() {
-    document.querySelectorAll('.timer-mode-switcher button').forEach(button => {
-        button.classList.remove('active');
-    });
-    document.getElementById(`switchTo${currentTimerMode}`).classList.add('active');
-}
-
-function disableTimerModeSwitcher() {
-    document.querySelectorAll('.timer-mode-switcher button').forEach(button => {
-        button.disabled = true;
-    });
-}
-
-function enableTimerModeSwitcher() {
-    document.querySelectorAll('.timer-mode-switcher button').forEach(button => {
-        button.disabled = false;
-    });
-}
-
+// Уведомления
 function showNotification(message, type) {
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
@@ -382,6 +514,22 @@ function showNotification(message, type) {
     }, 3000);
 }
 
-// Глобальные функции для использования в HTML
-window.copyReferralLink = copyReferralLink;
-window.shareReferralLink = shareReferralLink;
+// Инициализация кнопки таймера
+function toggleTimer() {
+    if (isTimerRunning()) {
+        showConfirmation('Завершить таймер и получить награду?', claimTime);
+    } else {
+        showConfirmation('Запустить таймер?', startTimer);
+    }
+}
+
+// Функция подтверждения действий
+function showConfirmation(message, callback) {
+    if (window.Telegram?.WebApp) {
+        Telegram.WebApp.showConfirm(message, (confirmed) => {
+            if (confirmed) callback();
+        });
+    } else if (confirm(message)) {
+        callback();
+    }
+}
