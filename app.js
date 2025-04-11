@@ -15,6 +15,7 @@ const leaderboard = document.getElementById('leaderboard');
 const friendsContent = document.getElementById('friends-content');
 const taskList = document.getElementById('taskList');
 const achievementsList = document.getElementById('achievementsList');
+const pages = document.querySelectorAll('.page');
 
 // Состояние приложения
 let currentUser = null;
@@ -80,6 +81,7 @@ async function initTelegramApp() {
         
         initButtons();
         loadUserData();
+        showPage('home'); // Показываем домашнюю страницу по умолчанию
         
         if (data.user.isNewUser) {
             showNotification('Добро пожаловать в NotTime!', 'success');
@@ -103,17 +105,49 @@ function initButtons() {
     // Навигация
     navbarButtons.forEach(button => {
         button.addEventListener('click', () => {
-            showPage(button.dataset.page);
+            const pageId = button.dataset.page;
+            showPage(pageId);
             setActiveNavButton(button);
-            
-            // Загружаем данные для страницы
-            if (button.dataset.page === 'friends') {
-                loadFriendsPage();
-            } else if (button.dataset.page === 'tasks') {
-                loadTasksPage();
-            }
         });
     });
+}
+
+// Показать страницу
+function showPage(pageId) {
+    // Скрыть все страницы
+    pages.forEach(page => {
+        page.classList.remove('active');
+    });
+    
+    // Показать выбранную страницу
+    const activePage = document.getElementById(pageId);
+    if (activePage) {
+        activePage.classList.add('active');
+        
+        // Загружаем данные для страницы при ее открытии
+        switch(pageId) {
+            case 'leaders':
+                loadLeaderboard();
+                break;
+            case 'friends':
+                loadFriendsPage();
+                break;
+            case 'tasks':
+                loadTasksPage();
+                break;
+        }
+    }
+}
+
+// Загрузка таблицы лидеров
+async function loadLeaderboard() {
+    try {
+        const leaders = await fetch(`${API}/leaders`).then(r => r.json());
+        updateLeaderboard(leaders);
+    } catch (error) {
+        console.error('Ошибка загрузки лидеров:', error);
+        showNotification('Ошибка загрузки таблицы лидеров', 'error');
+    }
 }
 
 // Обработчик основной кнопки таймера
