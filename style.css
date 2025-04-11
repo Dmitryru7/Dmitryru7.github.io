@@ -300,3 +300,37 @@ body {
         font-size: 1.2rem;
     }
 }
+
+/* Анимация переключения страниц */
+.page {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Улучшаем отзывчивость кнопок навигации */
+.nav-button {
+    transition: all 0.2s ease;
+    padding: 8px 5px;
+}
+
+.nav-button.active {
+    transform: translateY(-5px);
+}
+
+.nav-button:active {
+    transform: scale(0.95);
+}
+
+/* Делаем кнопки навигации более заметными */
+.nav-button i {
+    font-size: 1.4rem;
+    margin-bottom: 3px;
+}
+
+.nav-button span {
+    font-size: 0.9rem;
+}
