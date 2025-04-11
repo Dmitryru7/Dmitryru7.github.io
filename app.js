@@ -1,4 +1,4 @@
-const API = 'https://sahar.mist.net.ru'; // Замените на ваш API URL
+const API = 'https://sahar.mist.net.ru';
 
 // DOM элементы
 const authPage = document.getElementById('auth-page');
@@ -8,10 +8,15 @@ const timerProgress = document.getElementById('timerProgress');
 const claimButton = document.getElementById('claimButton');
 const globalTimerElement = document.getElementById('globalTimer');
 const levelElement = document.getElementById('level');
-const navbarButtons = document.querySelectorAll('.nav-button');
 const switchTo24Hours = document.getElementById('switchTo24Hours');
 const switchTo160Hours = document.getElementById('switchTo160Hours');
+const navbarButtons = document.querySelectorAll('.nav-button');
+const leaderboard = document.getElementById('leaderboard');
+const friendsContent = document.getElementById('friends-content');
+const taskList = document.getElementById('taskList');
+const achievementsList = document.getElementById('achievementsList');
 
+// Состояние приложения
 let currentUser = null;
 let pollingInterval = null;
 let currentTimerMode = '24Hours';
@@ -29,32 +34,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else {
         showAuthPage();
     }
-    
-    // Инициализация переключателя режимов таймера
-    switchTo24Hours.addEventListener('click', () => {
-        currentTimerMode = '24Hours';
-        updateTimerModeButtons();
-        if (!isTimerRunning()) {
-            timerElement.textContent = '24:00:00';
-        }
-    });
-    
-    switchTo160Hours.addEventListener('click', () => {
-        currentTimerMode = '160Hours';
-        updateTimerModeButtons();
-        if (!isTimerRunning()) {
-            timerElement.textContent = '160:00:00';
-        }
-    });
-    
-    // Инициализация навигации
-    navbarButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            showPage(button.dataset.page);
-            navbarButtons.forEach(btn => btn.classList.remove('active'));
-            button.classList.add('active');
-        });
-    });
 });
 
 // Проверка платформы
@@ -76,14 +55,10 @@ async function initTelegramApp() {
     try {
         const tgWebApp = Telegram.WebApp;
         
-        // Инициализация WebApp
         tgWebApp.expand();
         tgWebApp.enableClosingConfirmation();
-        
-        // Настройка темы
         updateTelegramTheme();
         
-        // Авторизация
         const response = await fetch(`${API}/tg-auth`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -100,14 +75,12 @@ async function initTelegramApp() {
         const data = await response.json();
         currentUser = data.user;
         
-        // Показываем интерфейс приложения
         authPage.style.display = 'none';
         appContent.style.display = 'block';
         
-        // Загружаем данные пользователя
+        initButtons();
         loadUserData();
         
-        // Показываем приветственное сообщение для новых пользователей
         if (data.user.isNewUser) {
             showNotification('Добро пожаловать в NotTime!', 'success');
         }
@@ -118,56 +91,77 @@ async function initTelegramApp() {
     }
 }
 
-// Обновление темы Telegram
-function updateTelegramTheme() {
-    if (!window.Telegram?.WebApp) return;
+// Инициализация кнопок
+function initButtons() {
+    // Кнопка Старт/Забрать
+    claimButton.addEventListener('click', handleTimerAction);
     
-    document.documentElement.style.setProperty(
-        '--tg-theme-bg-color', Telegram.WebApp.themeParams.bg_color || '#1e1e1e'
-    );
-    document.documentElement.style.setProperty(
-        '--tg-theme-text-color', Telegram.WebApp.themeParams.text_color || '#ffffff'
-    );
-    document.documentElement.style.setProperty(
-        '--tg-theme-button-color', Telegram.WebApp.themeParams.button_color || '#2ea6ff'
-    );
-    document.documentElement.style.setProperty(
-        '--tg-theme-button-text-color', Telegram.WebApp.themeParams.button_text_color || '#ffffff'
-    );
-    document.documentElement.style.setProperty(
-        '--tg-theme-secondary-bg-color', Telegram.WebApp.themeParams.secondary_bg_color || '#2e2e2e'
-    );
-    document.documentElement.style.setProperty(
-        '--tg-theme-hint-color', Telegram.WebApp.themeParams.hint_color || '#aaaaaa'
-    );
+    // Переключатели режимов
+    switchTo24Hours.addEventListener('click', () => switchTimerMode('24Hours'));
+    switchTo160Hours.addEventListener('click', () => switchTimerMode('160Hours'));
+    
+    // Навигация
+    navbarButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            showPage(button.dataset.page);
+            setActiveNavButton(button);
+            
+            // Загружаем данные для страницы
+            if (button.dataset.page === 'friends') {
+                loadFriendsPage();
+            } else if (button.dataset.page === 'tasks') {
+                loadTasksPage();
+            }
+        });
+    });
+}
+
+// Обработчик основной кнопки таймера
+async function handleTimerAction() {
+    if (isTimerRunning()) {
+        showConfirmation('Завершить таймер и получить награду?', claimTime);
+    } else {
+        showConfirmation(`Запустить ${currentTimerMode === '24Hours' ? '24-часовой' : '160-часовой'} таймер?`, startTimer);
+    }
+}
+
+// Переключение режимов таймера
+function switchTimerMode(mode) {
+    if (isTimerRunning()) {
+        showNotification('Нельзя менять режим во время работы таймера', 'error');
+        return;
+    }
+    
+    currentTimerMode = mode;
+    updateTimerModeUI();
+    timerElement.textContent = mode === '24Hours' ? '24:00:00' : '160:00:00';
+    timerProgress.style.width = '0%';
+}
+
+// Обновление UI переключателей
+function updateTimerModeUI() {
+    switchTo24Hours.classList.toggle('active', currentTimerMode === '24Hours');
+    switchTo160Hours.classList.toggle('active', currentTimerMode === '160Hours');
+}
+
+// Установка активной кнопки навигации
+function setActiveNavButton(activeBtn) {
+    navbarButtons.forEach(btn => btn.classList.remove('active'));
+    activeBtn.classList.add('active');
+}
+
+// Проверка работает ли таймер
+function isTimerRunning() {
+    return timerElement.classList.contains('running');
 }
 
 // Загрузка данных пользователя
 async function loadUserData() {
     try {
-        let status, leaders;
-
-try {
-  const statusPromise = fetch(`${API}/status/${currentUser.username}`)
-    .then(response => {
-      if (!response.ok) throw new Error('Ошибка статуса');
-      return response.json();
-    });
-    
-  const leadersPromise = fetch(`${API}/leaders`)
-    .then(response => {
-      if (!response.ok) throw new Error('Ошибка списка лидеров');
-      return response.json();
-    });
-
-  status = await statusPromise;
-  leaders = await leadersPromise;
-  
-} catch (error) {
-  console.error('Ошибка:', error.message);
-  showNotification(error.message, 'error');
-  return;
-}
+        const [status, leaders] = await Promise.all([
+            fetch(`${API}/status/${currentUser.username}`).then(r => r.json()),
+            fetch(`${API}/leaders`).then(r => r.json())
+        ]);
         
         updateTimerDisplay(
             status.accumulatedTime,
@@ -181,9 +175,6 @@ try {
         
         updateLeaderboard(leaders);
         updateLevel(status.level || 1);
-        
-        // Показываем домашнюю страницу
-        showPage('home');
         
     } catch (error) {
         console.error('Ошибка загрузки данных:', error);
@@ -202,20 +193,18 @@ function formatTime(ms) {
 
 // Обновление отображения таймера
 function updateTimerDisplay(accumulatedTime, remainingTime, isRunning) {
+    const totalTime = TIMER_DURATIONS[currentTimerMode];
+    const progress = isRunning ? ((totalTime - remainingTime) / totalTime) * 100 : 0;
+    
+    timerProgress.style.width = `${progress}%`;
+    timerElement.textContent = isRunning ? formatTime(remainingTime) : 
+        (currentTimerMode === '24Hours' ? '24:00:00' : '160:00:00');
+    
     if (isRunning) {
-        const totalTime = TIMER_DURATIONS[currentTimerMode];
-        console.log(totalTime);
-        const progress = ((totalTime - remainingTime) / totalTime) * 100;
-        console.log(progress);
-        timerProgress.style.width = `${progress}%`;
-        
-        timerElement.textContent = formatTime(remainingTime);
         timerElement.classList.add('running');
         claimButton.innerHTML = '<i class="fas fa-stop"></i> Забрать';
         disableTimerModeSwitcher();
     } else {
-        timerProgress.style.width = '0%';
-        timerElement.textContent = currentTimerMode === '24Hours' ? '24:00:00' : '160:00:00';
         timerElement.classList.remove('running');
         claimButton.innerHTML = '<i class="fas fa-play"></i> Старт';
         enableTimerModeSwitcher();
@@ -224,9 +213,20 @@ function updateTimerDisplay(accumulatedTime, remainingTime, isRunning) {
     globalTimerElement.textContent = formatTime(accumulatedTime);
 }
 
+// Блокировка переключателей при работе таймера
+function disableTimerModeSwitcher() {
+    switchTo24Hours.disabled = true;
+    switchTo160Hours.disabled = true;
+}
+
+// Разблокировка переключателей
+function enableTimerModeSwitcher() {
+    switchTo24Hours.disabled = false;
+    switchTo160Hours.disabled = false;
+}
+
 // Обновление таблицы лидеров
 function updateLeaderboard(leaders) {
-    const leaderboard = document.getElementById('leaderboard');
     leaderboard.innerHTML = leaders && leaders.length > 0
         ? leaders.map((user, index) => `
             <li>
@@ -315,23 +315,6 @@ function startPolling() {
     }, 1000);
 }
 
-// Переключение страниц
-function showPage(pageId) {
-    document.querySelectorAll('.page').forEach(page => {
-        page.classList.remove('active');
-    });
-    
-    document.getElementById(pageId).classList.add('active');
-    localStorage.setItem('currentPage', pageId);
-    
-    // Загружаем данные для страницы
-    if (pageId === 'friends') {
-        loadFriendsPage();
-    } else if (pageId === 'tasks') {
-        loadTasksPage();
-    }
-}
-
 // Загрузка страницы друзей
 async function loadFriendsPage() {
     try {
@@ -348,24 +331,17 @@ async function loadFriendsPage() {
 
 // Отображение страницы друзей
 function renderFriendsPage(data) {
-    const friendsContent = document.getElementById('friends-content');
-    
-    let referrerInfo = '';
-    if (data.referrer) {
-        referrerInfo = `
-            <div class="info-box">
-                <i class="fas fa-user-plus"></i>
-                <span>Вас пригласил: <strong>${data.referrer}</strong></span>
-            </div>
-        `;
-    }
-    
     const nextClaimTime = data.nextClaimIn ? 
         formatSeconds(data.nextClaimIn) : 'Готово к получению';
     
     friendsContent.innerHTML = `
         <div class="referral-stats">
-            ${referrerInfo}
+            ${data.referrer ? `
+                <div class="info-box">
+                    <i class="fas fa-user-plus"></i>
+                    <span>Вас пригласил: <strong>${data.referrer}</strong></span>
+                </div>
+            ` : ''}
             
             <div class="stats-row">
                 <div class="stat-box">
@@ -413,8 +389,50 @@ function renderFriendsPage(data) {
         </div>
     `;
     
-    // Назначаем обработчик кнопки получения бонуса
     document.getElementById('claimBonusBtn')?.addEventListener('click', claimReferralBonus);
+}
+
+// Загрузка страницы заданий
+async function loadTasksPage() {
+    try {
+        const response = await fetch(`${API}/tasks/${currentUser.username}`);
+        if (!response.ok) throw new Error('Ошибка загрузки');
+        
+        const data = await response.json();
+        renderTasksPage(data);
+    } catch (error) {
+        console.error('Ошибка загрузки заданий:', error);
+        showNotification('Ошибка загрузки заданий', 'error');
+    }
+}
+
+// Отображение страницы заданий
+function renderTasksPage(data) {
+    taskList.innerHTML = data.tasks.map(task => `
+        <li class="task-item ${task.completed ? 'completed' : ''}">
+            <div class="task-info">
+                <h3>${task.title}</h3>
+                <p>${task.description}</p>
+                <div class="task-progress">
+                    <progress value="${task.progress}" max="${task.required}"></progress>
+                    <span>${task.progress}/${task.required}</span>
+                </div>
+            </div>
+            <button class="claim-task-btn" ${task.canClaim ? '' : 'disabled'}>
+                ${task.reward} XP
+            </button>
+        </li>
+    `).join('');
+
+    achievementsList.innerHTML = data.achievements.map(ach => `
+        <li class="achievement-item ${ach.completed ? 'unlocked' : 'locked'}">
+            <i class="fas ${ach.completed ? 'fa-check-circle' : 'fa-lock'}"></i>
+            <div>
+                <h3>${ach.title}</h3>
+                <p>${ach.description}</p>
+            </div>
+        </li>
+    `).join('');
 }
 
 // Генерация реферальной ссылки
@@ -422,8 +440,7 @@ function generateReferralLink() {
     if (!currentUser?.referralCode) return '';
     
     if (window.Telegram?.WebApp) {
-        const tg = Telegram.WebApp;
-        const botUsername = tg.initDataUnsafe.user?.username || 'bigdik30cm_bot';
+        const botUsername = Telegram.WebApp.initDataUnsafe.user?.username || 'bigdik30cm_bot';
         const startParam = `ref_${currentUser.referralCode}`;
         return `https://t.me/${botUsername}?startapp=${startParam}`;
     }
@@ -455,55 +472,7 @@ async function claimReferralBonus() {
     }
 }
 
-// Вспомогательные функции
-function getReferralCodeFromUrl() {
-    if (window.Telegram?.WebApp) {
-        const startParam = Telegram.WebApp.initDataUnsafe.start_param;
-        if (startParam && startParam.startsWith('ref_')) {
-            return startParam.substring(4);
-        }
-    }
-    return null;
-}
-
-function formatSeconds(seconds) {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-}
-
-function isTimerRunning() {
-    return timerElement.classList.contains('running');
-}
-
-function updateTimerModeButtons() {
-    const buttons = {
-        '24Hours': switchTo24Hours,
-        '160Hours': switchTo160Hours
-    };
-    
-    Object.values(buttons).forEach(btn => btn.classList.remove('active'));
-    buttons[currentTimerMode].classList.add('active');
-}
-
-function disableTimerModeSwitcher() {
-    switchTo24Hours.disabled = true;
-    switchTo160Hours.disabled = true;
-}
-
-function enableTimerModeSwitcher() {
-    switchTo24Hours.disabled = false;
-    switchTo160Hours.disabled = false;
-}
-
-function triggerHapticFeedback(type) {
-    if (window.Telegram?.WebApp?.HapticFeedback) {
-        Telegram.WebApp.HapticFeedback.impactOccurred(type);
-    }
-}
-
-// Глобальные функции для использования в HTML
+// Глобальные функции для HTML
 window.copyReferralLink = function() {
     const input = document.getElementById('referralLink');
     input.select();
@@ -523,7 +492,46 @@ window.shareReferralLink = function() {
     }
 };
 
-// Уведомления
+// Форматирование секунд в HH:MM:SS
+function formatSeconds(seconds) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+}
+
+// Обновление темы Telegram
+function updateTelegramTheme() {
+    if (!window.Telegram?.WebApp) return;
+    
+    const theme = Telegram.WebApp.themeParams;
+    document.documentElement.style.setProperty('--tg-theme-bg-color', theme.bg_color || '#1e1e1e');
+    document.documentElement.style.setProperty('--tg-theme-text-color', theme.text_color || '#ffffff');
+    document.documentElement.style.setProperty('--tg-theme-button-color', theme.button_color || '#2ea6ff');
+    document.documentElement.style.setProperty('--tg-theme-button-text-color', theme.button_text_color || '#ffffff');
+    document.documentElement.style.setProperty('--tg-theme-secondary-bg-color', theme.secondary_bg_color || '#2e2e2e');
+    document.documentElement.style.setProperty('--tg-theme-hint-color', theme.hint_color || '#aaaaaa');
+}
+
+// Тактильная отдача
+function triggerHapticFeedback(type) {
+    if (window.Telegram?.WebApp?.HapticFeedback) {
+        Telegram.WebApp.HapticFeedback.impactOccurred(type);
+    }
+}
+
+// Получение реферального кода из URL
+function getReferralCodeFromUrl() {
+    if (window.Telegram?.WebApp) {
+        const startParam = Telegram.WebApp.initDataUnsafe.start_param;
+        if (startParam && startParam.startsWith('ref_')) {
+            return startParam.substring(4);
+        }
+    }
+    return null;
+}
+
+// Показ уведомлений
 function showNotification(message, type) {
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
@@ -535,16 +543,7 @@ function showNotification(message, type) {
     }, 3000);
 }
 
-// Инициализация кнопки таймера
-function toggleTimer() {
-    if (isTimerRunning()) {
-        showConfirmation('Завершить таймер и получить награду?', claimTime);
-    } else {
-        showConfirmation('Запустить таймер?', startTimer);
-    }
-}
-
-// Функция подтверждения действий
+// Подтверждение действий
 function showConfirmation(message, callback) {
     if (window.Telegram?.WebApp) {
         Telegram.WebApp.showConfirm(message, (confirmed) => {
