@@ -153,7 +153,15 @@ async function loadLeaderboard() {
 // Обработчик основной кнопки таймера
 async function handleTimerAction() {
     if (isTimerRunning()) {
-        showConfirmation('Завершить таймер и получить награду?', claimTime);
+        const status = await fetch(`${API}/status/${currentUser.username}`).then(r => r.json());
+        
+        // Проверяем, завершился ли таймер
+        if (status.remainingTime <= 0) {
+            showConfirmation('Завершить таймер и получить награду?', claimTime);
+        } else {
+            showNotification('Таймер еще не завершен!', 'error');
+            triggerHapticFeedback('error');
+        }
     } else {
         showConfirmation(`Запустить ${currentTimerMode === '24Hours' ? '24-часовой' : '160-часовой'} таймер?`, startTimer);
     }
@@ -237,10 +245,12 @@ function updateTimerDisplay(accumulatedTime, remainingTime, isRunning) {
     if (isRunning) {
         timerElement.classList.add('running');
         claimButton.innerHTML = '<i class="fas fa-stop"></i> Забрать';
+        claimButton.disabled = remainingTime > 0; // Отключаем кнопку, если время не истекло
         disableTimerModeSwitcher();
     } else {
         timerElement.classList.remove('running');
         claimButton.innerHTML = '<i class="fas fa-play"></i> Старт';
+        claimButton.disabled = false;
         enableTimerModeSwitcher();
     }
     
@@ -305,6 +315,13 @@ async function startTimer() {
 // Завершение таймера
 async function claimTime() {
     try {
+        // Дополнительная проверка на сервере
+        const status = await fetch(`${API}/status/${currentUser.username}`).then(r => r.json());
+        
+        if (status.remainingTime > 0) {
+            throw new Error('Таймер еще не завершен');
+        }
+        
         const response = await fetch(`${API}/claim`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -323,7 +340,7 @@ async function claimTime() {
         }
     } catch (error) {
         console.error('Ошибка завершения таймера:', error);
-        showNotification('Ошибка завершения таймера', 'error');
+        showNotification(error.message || 'Ошибка завершения таймера', 'error');
     }
 }
 
@@ -339,8 +356,11 @@ function startPolling() {
                 status.isRunning
             );
             
-            if (!status.isRunning) {
+            if (!status.isRunning || status.remainingTime <= 0) {
                 clearInterval(pollingInterval);
+                if (status.remainingTime <= 0) {
+                    claimButton.disabled = false; // Разблокируем кнопку, когда время истекло
+                }
             }
         } catch (error) {
             console.error('Ошибка опроса:', error);
