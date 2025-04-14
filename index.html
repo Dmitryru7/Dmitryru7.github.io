@@ -10,8 +10,11 @@
 <body>
     <div id="auth-page">
         <div class="auth-container">
-            <h1>NotTime</h1>
-            <p>Пожалуйста, откройте приложение через мобильную версию Telegram</p>
+            <div class="logo">
+                <div class="logo-icon"><i class="fas fa-hourglass-half"></i></div>
+                <h1>NotTime</h1>
+            </div>
+            <p class="auth-message">Пожалуйста, откройте приложение через мобильную версию Telegram</p>
             <div class="desktop-options">
                 <a href="https://web.telegram.org/" target="_blank" class="tg-button">
                     <i class="fab fa-telegram"></i> Web Telegram
@@ -24,59 +27,186 @@
     </div>
 
     <div id="app-content" class="container">
+        <!-- Главный экран -->
         <div id="home" class="page active">
+            <div class="app-header">
+                <div class="logo">
+                    <div class="logo-icon"><i class="fas fa-hourglass-half"></i></div>
+                    <h1>NotTime</h1>
+                </div>
+                <div class="user-level">
+                    <span>Уровень</span>
+                    <div class="level-badge" id="level">1</div>
+                </div>
+            </div>
+            
             <div class="timer-card">
+                <div class="timer-header">
+                    <span id="timerModeLabel">24-часовой режим</span>
+                    <div class="xp-progress">
+                        <span id="xpProgress">0/1000 XP</span>
+                        <div class="xp-bar">
+                            <div class="xp-fill" id="xpFill"></div>
+                        </div>
+                    </div>
+                </div>
+                
                 <div id="timer" class="timer-display">24:00:00</div>
+                
                 <div class="progress-container">
                     <div id="timerProgress" class="progress-bar"></div>
                 </div>
                 
                 <div class="stats-grid">
                     <div class="stat-box">
+                        <div class="stat-icon"><i class="fas fa-clock"></i></div>
                         <span class="stat-label">Накоплено</span>
                         <div id="globalTimer" class="stat-value">00:00:00</div>
                     </div>
                     <div class="stat-box">
-                        <span class="stat-label">Уровень</span>
-                        <div id="level" class="stat-value">1</div>
+                        <div class="stat-icon"><i class="fas fa-bolt"></i></div>
+                        <span class="stat-label">Текущий сеанс</span>
+                        <div id="sessionTimer" class="stat-value">00:00:00</div>
                     </div>
                 </div>
                 
                 <div class="mode-switcher">
-                    <button id="switchTo24Hours" class="mode-button active">24 ч</button>
-                    <button id="switchTo160Hours" class="mode-button">160 ч</button>
+                    <button id="switchTo24Hours" class="mode-button active">
+                        <i class="fas fa-clock"></i> 24 ч
+                    </button>
+                    <button id="switchTo160Hours" class="mode-button">
+                        <i class="fas fa-calendar-alt"></i> 160 ч
+                    </button>
                 </div>
                 
                 <button id="claimButton" class="action-button primary">
                     <i class="fas fa-play"></i> Старт
                 </button>
             </div>
+            
+            <div class="quick-stats">
+                <div class="stat-item">
+                    <i class="fas fa-trophy"></i>
+                    <span>Место в топе: <strong id="userRank">-</strong></span>
+                </div>
+                <div class="stat-item">
+                    <i class="fas fa-users"></i>
+                    <span>Рефералов: <strong id="referralsCount">0</strong></span>
+                </div>
+            </div>
         </div>
 
+        <!-- Лидеры -->
         <div id="leaders" class="page">
-            <div class="card">
+            <div class="app-header">
+                <div class="header-back" onclick="showPage('home')">
+                    <i class="fas fa-arrow-left"></i>
+                </div>
                 <h2><i class="fas fa-trophy"></i> Топ игроков</h2>
+                <div class="header-actions">
+                    <i class="fas fa-info-circle" onclick="showNotification('Рейтинг обновляется каждые 5 минут', 'info')"></i>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="leaderboard-header">
+                    <span>Игрок</span>
+                    <span>Время</span>
+                </div>
                 <ul id="leaderboard" class="leader-list"></ul>
+                
+                <div class="user-position">
+                    <div class="position-marker">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="position-info" id="userPosition">
+                        <span>Ваша позиция: загрузка...</span>
+                    </div>
+                </div>
             </div>
         </div>
 
+        <!-- Рефералы -->
         <div id="friends" class="page">
-            <div class="card">
+            <div class="app-header">
+                <div class="header-back" onclick="showPage('home')">
+                    <i class="fas fa-arrow-left"></i>
+                </div>
                 <h2><i class="fas fa-users"></i> Рефералы</h2>
-                <div id="friends-content"></div>
+            </div>
+            
+            <div class="card">
+                <div class="referral-stats">
+                    <div class="stats-grid">
+                        <div class="stat-box accent">
+                            <div class="stat-icon"><i class="fas fa-coins"></i></div>
+                            <span class="stat-label">Доступно</span>
+                            <div id="pendingBonus" class="stat-value">00:00:00</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-icon"><i class="fas fa-wallet"></i></div>
+                            <span class="stat-label">Всего получено</span>
+                            <div id="totalEarned" class="stat-value">00:00:00</div>
+                        </div>
+                    </div>
+                    
+                    <button id="claimBonusBtn" class="action-button primary">
+                        <i class="fas fa-gift"></i> Получить 10%
+                    </button>
+                    
+                    <div class="info-box" id="nextClaimInfo">
+                        <i class="fas fa-clock"></i>
+                        <span>Следующее получение: <strong>через 24:00:00</strong></span>
+                    </div>
+                </div>
+                
+                <div class="section-divider">
+                    <span>Ваша реферальная ссылка</span>
+                </div>
+                
+                <div class="input-group">
+                    <input type="text" id="referralLink" value="Загрузка..." readonly>
+                    <button onclick="copyReferralLink()" class="action-button icon">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+                
+                <button onclick="shareReferralLink()" class="action-button secondary">
+                    <i class="fas fa-share-alt"></i> Поделиться
+                </button>
+                
+                <div class="section-divider">
+                    <span>Ваши рефералы (<span id="referralsCount">0</span>)</span>
+                </div>
+                
+                <div class="referrals-list">
+                    <div id="referralsContainer" class="empty-state">
+                        <i class="fas fa-user-plus"></i>
+                        <p>Пригласите друзей и получайте 10% от их времени</p>
+                    </div>
+                </div>
             </div>
         </div>
 
+        <!-- Задания -->
         <div id="tasks" class="page">
-            <div class="card">
+            <div class="app-header">
+                <div class="header-back" onclick="showPage('home')">
+                    <i class="fas fa-arrow-left"></i>
+                </div>
                 <h2><i class="fas fa-tasks"></i> Задания</h2>
+            </div>
+            
+            <div class="card">
+                <h3 class="section-title"><i class="fas fa-check-circle"></i> Активные задания</h3>
                 <ul id="taskList" class="task-list"></ul>
                 
-                <h3><i class="fas fa-star"></i> Достижения</h3>
-                <ul id="achievementsList" class="achievements-list"></ul>
+                <h3 class="section-title"><i class="fas fa-star"></i> Достижения</h3>
+                <div id="achievementsList" class="achievements-grid"></div>
             </div>
         </div>
 
+        <!-- Навигация -->
         <nav class="navbar">
             <button data-page="home" class="nav-button active">
                 <i class="fas fa-clock"></i>
