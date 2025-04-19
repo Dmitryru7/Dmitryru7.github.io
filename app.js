@@ -118,6 +118,30 @@ function initButtons() {
             setActiveNavButton(button);
         });
     });
+    
+    // Инициализация кнопки получения реферального бонуса
+    claimBonusBtn.addEventListener('click', async () => {
+        try {
+            const response = await fetch(`${API}/claim-referral-bonus`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: currentUser.username })
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                showNotification(`Получено +${formatTime(result.bonus)}!`, 'success');
+                triggerHapticFeedback('success');
+                loadFriendsPage();
+                loadUserData();
+            } else {
+                throw new Error('Ошибка сервера');
+            }
+        } catch (error) {
+            console.error('Ошибка получения бонуса:', error);
+            showNotification('Ошибка получения бонуса', 'error');
+        }
+    });
 }
 
 // Показать страницу
@@ -198,9 +222,10 @@ function isTimerRunning() {
 // Загрузка данных пользователя
 async function loadUserData() {
     try {
-        const [status, leaders] = await Promise.all([
+        const [status, leaders, position] = await Promise.all([
             fetch(`${API}/status/${currentUser.username}`).then(r => r.json()),
-            fetch(`${API}/leaders`).then(r => r.json())
+            fetch(`${API}/leaders`).then(r => r.json()),
+            fetch(`${API}/user-position/${currentUser.username}`).then(r => r.json())
         ]);
         
         updateTimerDisplay(
@@ -214,7 +239,7 @@ async function loadUserData() {
         }
         
         updateLeaderboard(leaders);
-        updateUserStats(status);
+        updateUserStats({ ...status, ...position });
         
     } catch (error) {
         console.error('Ошибка загрузки данных:', error);
@@ -223,14 +248,27 @@ async function loadUserData() {
 }
 
 // Обновление статистики пользователя
-function updateUserStats(status) {
-    levelElement.textContent = status.level || 1;
-    userRankElement.textContent = status.rank || '-';
-    
-    // Обновление прогресса XP
-    const xpPercentage = Math.min((status.xp / status.xpToNextLevel) * 100, 100);
-    xpProgressElement.textContent = `${status.xp}/${status.xpToNextLevel} XP`;
-    xpFillElement.style.width = `${xpPercentage}%`;
+async function updateUserStats(data) {
+    try {
+        levelElement.textContent = data.level || 1;
+        userRankElement.textContent = data.rank || '-';
+        
+        // Обновление прогресса XP
+        const xpPercentage = Math.min((data.xp / data.xpToNextLevel) * 100, 100);
+        xpProgressElement.textContent = `${data.xp}/${data.xpToNextLevel} XP`;
+        xpFillElement.style.width = `${xpPercentage}%`;
+        
+        // Обновляем позицию на странице лидеров
+        if (data.rank) {
+            userPositionElement.innerHTML = `
+                <span>Ваша позиция: <strong>${data.rank}</strong></span>
+                <span class="position-time">${formatTime(data.accumulatedTime)}</span>
+            `;
+        }
+        
+    } catch (error) {
+        console.error('Ошибка обновления статистики:', error);
+    }
 }
 
 // Обновление отображения таймера
@@ -266,12 +304,18 @@ function startPolling() {
     if (pollingInterval) clearInterval(pollingInterval);
     pollingInterval = setInterval(async () => {
         try {
-            const status = await fetch(`${API}/status/${currentUser.username}`).then(r => r.json());
+            const [status, position] = await Promise.all([
+                fetch(`${API}/status/${currentUser.username}`).then(r => r.json()),
+                fetch(`${API}/user-position/${currentUser.username}`).then(r => r.json())
+            ]);
+            
             updateTimerDisplay(
                 status.accumulatedTime,
                 status.remainingTime,
                 status.isRunning
             );
+            
+            updateUserStats({ ...status, ...position });
             
             if (!status.isRunning || status.remainingTime <= 0) {
                 clearInterval(pollingInterval);
@@ -284,7 +328,7 @@ function startPolling() {
             console.error('Ошибка опроса:', error);
             clearInterval(pollingInterval);
         }
-    }, 1000);
+    }, 5000);
 }
 
 // Запуск таймера
@@ -507,30 +551,6 @@ function generateReferralLink() {
     }
     
     return `https://t.me/bigdik30cm_bot?start=ref_${currentUser.referralCode}`;
-}
-
-// Получение реферального бонуса
-async function claimReferralBonus() {
-    try {
-        const response = await fetch(`${API}/claim-referral-bonus`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: currentUser.username })
-        });
-        
-        if (response.ok) {
-            const result = await response.json();
-            showNotification(`Получено +${formatTime(result.bonus)}!`, 'success');
-            triggerHapticFeedback('success');
-            loadFriendsPage();
-            loadUserData();
-        } else {
-            throw new Error('Ошибка сервера');
-        }
-    } catch (error) {
-        console.error('Ошибка получения бонуса:', error);
-        showNotification('Ошибка получения бонуса', 'error');
-    }
 }
 
 // Глобальные функции для HTML
