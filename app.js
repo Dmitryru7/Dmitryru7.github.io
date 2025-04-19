@@ -48,7 +48,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
-// Проверка платформы
 function checkPlatform() {
     const isMobile = /Android|iPhone|iPad|iPod|Windows Phone/i.test(navigator.userAgent);
     if (!isMobile && !window.Telegram?.WebApp) {
@@ -56,24 +55,29 @@ function checkPlatform() {
     }
 }
 
-// Показать страницу авторизации
 function showAuthPage() {
     authPage.style.display = 'flex';
     appContent.style.display = 'none';
 }
 
-// Инициализация Telegram WebApp
 async function initTelegramApp() {
     try {
         const tgWebApp = Telegram.WebApp;
         
+        if (!tgWebApp.initData) {
+            throw new Error("Данные Telegram не получены");
+        }
+
         tgWebApp.expand();
         tgWebApp.enableClosingConfirmation();
         updateTelegramTheme();
         
         const response = await fetch(`${API}/tg-auth`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
             body: JSON.stringify({ 
                 initData: tgWebApp.initData,
                 referralCode: getReferralCodeFromUrl()
@@ -81,7 +85,8 @@ async function initTelegramApp() {
         });
         
         if (!response.ok) {
-            throw new Error('Ошибка авторизации');
+            const errorText = await response.text();
+            throw new Error(`Ошибка сервера: ${errorText}`);
         }
         
         const data = await response.json();
@@ -97,14 +102,13 @@ async function initTelegramApp() {
         if (data.user.isNewUser) {
             showNotification('Добро пожаловать в NotTime!', 'success');
         }
-        
     } catch (error) {
         console.error('Ошибка инициализации Telegram:', error);
+        showNotification('Ошибка авторизации. Пожалуйста, попробуйте позже.', 'error');
         showAuthPage();
     }
 }
 
-// Инициализация кнопок
 function initButtons() {
     claimButton.addEventListener('click', handleTimerAction);
     
@@ -119,7 +123,6 @@ function initButtons() {
         });
     });
     
-    // Инициализация кнопки получения реферального бонуса
     claimBonusBtn.addEventListener('click', async () => {
         try {
             const response = await fetch(`${API}/claim-referral-bonus`, {
@@ -144,7 +147,6 @@ function initButtons() {
     });
 }
 
-// Показать страницу
 function showPage(pageId) {
     pages.forEach(page => page.classList.remove('active'));
     const activePage = document.getElementById(pageId);
@@ -165,7 +167,6 @@ function showPage(pageId) {
     }
 }
 
-// Установка активной кнопки навигации
 function setActiveNavButton(activeBtn) {
     navbarButtons.forEach(btn => {
         btn.classList.remove('active');
@@ -178,7 +179,6 @@ function setActiveNavButton(activeBtn) {
     activeBtn.querySelector('span').style.color = 'var(--tg-theme-button-color)';
 }
 
-// Обработчик основной кнопки таймера
 async function handleTimerAction() {
     if (isTimerRunning()) {
         const status = await fetch(`${API}/status/${currentUser.username}`).then(r => r.json());
@@ -194,7 +194,6 @@ async function handleTimerAction() {
     }
 }
 
-// Переключение режимов таймера
 function switchTimerMode(mode) {
     if (isTimerRunning()) {
         showNotification('Нельзя менять режим во время работы таймера', 'error');
@@ -208,18 +207,15 @@ function switchTimerMode(mode) {
     timerModeLabel.textContent = mode === '24Hours' ? '24-часовой режим' : '160-часовой режим';
 }
 
-// Обновление UI переключателей
 function updateTimerModeUI() {
     switchTo24Hours.classList.toggle('active', currentTimerMode === '24Hours');
     switchTo160Hours.classList.toggle('active', currentTimerMode === '160Hours');
 }
 
-// Проверка работает ли таймер
 function isTimerRunning() {
     return timerElement.classList.contains('running');
 }
 
-// Загрузка данных пользователя
 async function loadUserData() {
     try {
         const [status, leaders, position] = await Promise.all([
@@ -240,38 +236,32 @@ async function loadUserData() {
         
         updateLeaderboard(leaders);
         updateUserStats({ ...status, ...position });
-        
     } catch (error) {
         console.error('Ошибка загрузки данных:', error);
-        showNotification('Ошибка загрузки данных', 'error');
+        showNotification('Ошибка загрузки данных. Проверьте соединение.', 'error');
     }
 }
 
-// Обновление статистики пользователя
 async function updateUserStats(data) {
     try {
         levelElement.textContent = data.level || 1;
         userRankElement.textContent = data.rank || '-';
         
-        // Обновление прогресса XP
         const xpPercentage = Math.min((data.xp / data.xpToNextLevel) * 100, 100);
         xpProgressElement.textContent = `${data.xp}/${data.xpToNextLevel} XP`;
         xpFillElement.style.width = `${xpPercentage}%`;
         
-        // Обновляем позицию на странице лидеров
         if (data.rank) {
             userPositionElement.innerHTML = `
                 <span>Ваша позиция: <strong>${data.rank}</strong></span>
                 <span class="position-time">${formatTime(data.accumulatedTime)}</span>
             `;
         }
-        
     } catch (error) {
         console.error('Ошибка обновления статистики:', error);
     }
 }
 
-// Обновление отображения таймера
 function updateTimerDisplay(accumulatedTime, remainingTime, isRunning) {
     const totalTime = TIMER_DURATIONS[currentTimerMode];
     const progress = isRunning ? ((totalTime - remainingTime) / totalTime) * 100 : 0;
@@ -293,13 +283,10 @@ function updateTimerDisplay(accumulatedTime, remainingTime, isRunning) {
     }
     
     globalTimerElement.textContent = formatTime(accumulatedTime);
-    
-    // Обновление времени текущего сеанса
     const sessionTime = isRunning ? totalTime - remainingTime : 0;
     sessionTimerElement.textContent = formatTime(sessionTime);
 }
 
-// Опрос статуса таймера
 function startPolling() {
     if (pollingInterval) clearInterval(pollingInterval);
     pollingInterval = setInterval(async () => {
@@ -331,12 +318,14 @@ function startPolling() {
     }, 5000);
 }
 
-// Запуск таймера
 async function startTimer() {
     try {
         const response = await fetch(`${API}/start`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
             body: JSON.stringify({ 
                 username: currentUser.username,
                 duration: TIMER_DURATIONS[currentTimerMode]
@@ -348,15 +337,16 @@ async function startTimer() {
             showNotification('Таймер запущен!', 'success');
             triggerHapticFeedback('light');
         } else {
-            throw new Error('Ошибка сервера');
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Ошибка сервера');
         }
     } catch (error) {
         console.error('Ошибка запуска таймера:', error);
-        showNotification('Ошибка запуска таймера', 'error');
+        showNotification(`Ошибка запуска: ${error.message}`, 'error');
+        triggerHapticFeedback('error');
     }
 }
 
-// Завершение таймера
 async function claimTime() {
     try {
         const status = await fetch(`${API}/status/${currentUser.username}`).then(r => r.json());
@@ -387,7 +377,6 @@ async function claimTime() {
     }
 }
 
-// Загрузка таблицы лидеров
 async function loadLeaderboard() {
     try {
         const [leaders, userPosition] = await Promise.all([
@@ -403,7 +392,6 @@ async function loadLeaderboard() {
     }
 }
 
-// Обновление таблицы лидеров
 function updateLeaderboard(leaders) {
     leaderboard.innerHTML = leaders && leaders.length > 0
         ? leaders.map((user, index) => `
@@ -416,7 +404,6 @@ function updateLeaderboard(leaders) {
         : '<li class="empty">Пока никто не участвовал</li>';
 }
 
-// Обновление позиции пользователя
 function updateUserPosition(position) {
     if (position && position.rank) {
         userPositionElement.innerHTML = `
@@ -428,7 +415,6 @@ function updateUserPosition(position) {
     }
 }
 
-// Загрузка страницы друзей
 async function loadFriendsPage() {
     try {
         const response = await fetch(`${API}/referrals/${currentUser.username}`);
@@ -442,7 +428,6 @@ async function loadFriendsPage() {
     }
 }
 
-// Отображение страницы друзей
 function renderFriendsPage(data) {
     pendingBonusElement.textContent = formatTime(data.pendingBonus || 0);
     totalEarnedElement.textContent = formatTime(data.totalEarned || 0);
@@ -466,7 +451,6 @@ function renderFriendsPage(data) {
         nextClaimInfo.style.display = 'flex';
     }
     
-    // Обновление списка рефералов
     if (data.referrals.length > 0) {
         referralsContainer.classList.remove('empty-state');
         referralsContainer.innerHTML = `
@@ -490,14 +474,12 @@ function renderFriendsPage(data) {
         `;
     }
     
-    // Обновление реферальной ссылки
     const referralLink = document.getElementById('referralLink');
     if (referralLink) {
         referralLink.value = generateReferralLink();
     }
 }
 
-// Загрузка страницы заданий
 async function loadTasksPage() {
     try {
         const response = await fetch(`${API}/tasks/${currentUser.username}`);
@@ -511,7 +493,6 @@ async function loadTasksPage() {
     }
 }
 
-// Отображение страницы заданий
 function renderTasksPage(data) {
     taskList.innerHTML = data.tasks.map(task => `
         <li class="task-item ${task.completed ? 'completed' : ''}">
@@ -540,7 +521,6 @@ function renderTasksPage(data) {
     `).join('');
 }
 
-// Генерация реферальной ссылки
 function generateReferralLink() {
     if (!currentUser?.referralCode) return 'Загрузка...';
     
@@ -553,7 +533,6 @@ function generateReferralLink() {
     return `https://t.me/bigdik30cm_bot?start=ref_${currentUser.referralCode}`;
 }
 
-// Глобальные функции для HTML
 window.copyReferralLink = function() {
     const input = document.getElementById('referralLink');
     input.select();
@@ -573,7 +552,6 @@ window.shareReferralLink = function() {
     }
 };
 
-// Форматирование времени
 function formatTime(ms) {
     const totalSeconds = Math.floor(ms / 1000);
     const hours = Math.floor(totalSeconds / 3600);
@@ -589,19 +567,16 @@ function formatSeconds(seconds) {
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 }
 
-// Блокировка переключателей при работе таймера
 function disableTimerModeSwitcher() {
     switchTo24Hours.disabled = true;
     switchTo160Hours.disabled = true;
 }
 
-// Разблокировка переключателей
 function enableTimerModeSwitcher() {
     switchTo24Hours.disabled = false;
     switchTo160Hours.disabled = false;
 }
 
-// Обновление темы Telegram
 function updateTelegramTheme() {
     if (!window.Telegram?.WebApp) return;
     
@@ -614,14 +589,12 @@ function updateTelegramTheme() {
     document.documentElement.style.setProperty('--tg-theme-hint-color', theme.hint_color || '#aaaaaa');
 }
 
-// Тактильная отдача
 function triggerHapticFeedback(type) {
     if (window.Telegram?.WebApp?.HapticFeedback) {
         Telegram.WebApp.HapticFeedback.impactOccurred(type);
     }
 }
 
-// Получение реферального кода из URL
 function getReferralCodeFromUrl() {
     if (window.Telegram?.WebApp) {
         const startParam = Telegram.WebApp.initDataUnsafe.start_param;
@@ -632,7 +605,6 @@ function getReferralCodeFromUrl() {
     return null;
 }
 
-// Показ уведомлений
 function showNotification(message, type) {
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
@@ -648,7 +620,6 @@ function showNotification(message, type) {
     }, 3000);
 }
 
-// Подтверждение действий
 function showConfirmation(message, callback) {
     if (window.Telegram?.WebApp) {
         Telegram.WebApp.showConfirm(message, (confirmed) => {
