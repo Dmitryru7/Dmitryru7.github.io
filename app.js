@@ -42,18 +42,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     checkPlatform();
     
     if (window.Telegram?.WebApp) {
-        try {
-            await initTelegramApp();
-        } catch (error) {
-            console.error('Init error:', error);
-            showNotification('Ошибка инициализации', 'error');
-            showAuthPage();
-        }
+        await initTelegramApp();
     } else {
         showAuthPage();
     }
 });
 
+// Проверка платформы
 function checkPlatform() {
     const isMobile = /Android|iPhone|iPad|iPod|Windows Phone/i.test(navigator.userAgent);
     if (!isMobile && !window.Telegram?.WebApp) {
@@ -61,54 +56,55 @@ function checkPlatform() {
     }
 }
 
+// Показать страницу авторизации
 function showAuthPage() {
     authPage.style.display = 'flex';
     appContent.style.display = 'none';
 }
 
+// Инициализация Telegram WebApp
 async function initTelegramApp() {
-    const tgWebApp = Telegram.WebApp;
-    
-    if (!tgWebApp.initData) {
-        throw new Error("Telegram initData not available");
-    }
-
-    tgWebApp.expand();
-    tgWebApp.enableClosingConfirmation();
-    updateTelegramTheme();
-    
-    const response = await fetch(`${API}/tg-auth`, {
-        method: 'POST',
-        headers: { 
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        },
-        body: JSON.stringify({ 
-            initData: tgWebApp.initData,
-            referralCode: getReferralCodeFromUrl()
-        })
-    });
-    
-    if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Auth error: ${errorText}`);
-    }
-    
-    const data = await response.json();
-    currentUser = data.user;
-    
-    authPage.style.display = 'none';
-    appContent.style.display = 'block';
-    
-    initButtons();
-    loadUserData();
-    showPage('home');
-    
-    if (data.user.isNewUser) {
-        showNotification('Добро пожаловать в NotTime!', 'success');
+    try {
+        const tgWebApp = Telegram.WebApp;
+        
+        tgWebApp.expand();
+        tgWebApp.enableClosingConfirmation();
+        updateTelegramTheme();
+        
+        const response = await fetch(`${API}/tg-auth`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                initData: tgWebApp.initData,
+                referralCode: getReferralCodeFromUrl()
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error('Ошибка авторизации');
+        }
+        
+        const data = await response.json();
+        currentUser = data.user;
+        
+        authPage.style.display = 'none';
+        appContent.style.display = 'block';
+        
+        initButtons();
+        loadUserData();
+        showPage('home');
+        
+        if (data.user.isNewUser) {
+            showNotification('Добро пожаловать в NotTime!', 'success');
+        }
+        
+    } catch (error) {
+        console.error('Ошибка инициализации Telegram:', error);
+        showAuthPage();
     }
 }
 
+// Инициализация кнопок
 function initButtons() {
     claimButton.addEventListener('click', handleTimerAction);
     
@@ -122,31 +118,9 @@ function initButtons() {
             setActiveNavButton(button);
         });
     });
-    
-    claimBonusBtn.addEventListener('click', async () => {
-        try {
-            const response = await fetch(`${API}/claim-referral-bonus`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: currentUser.username })
-            });
-            
-            if (response.ok) {
-                const result = await response.json();
-                showNotification(`Получено +${formatTime(result.bonus)}!`, 'success');
-                triggerHapticFeedback('success');
-                loadFriendsPage();
-                loadUserData();
-            } else {
-                throw new Error('Ошибка сервера');
-            }
-        } catch (error) {
-            console.error('Ошибка получения бонуса:', error);
-            showNotification('Ошибка получения бонуса', 'error');
-        }
-    });
 }
 
+// Показать страницу
 function showPage(pageId) {
     pages.forEach(page => page.classList.remove('active'));
     const activePage = document.getElementById(pageId);
@@ -167,6 +141,7 @@ function showPage(pageId) {
     }
 }
 
+// Установка активной кнопки навигации
 function setActiveNavButton(activeBtn) {
     navbarButtons.forEach(btn => {
         btn.classList.remove('active');
@@ -179,26 +154,23 @@ function setActiveNavButton(activeBtn) {
     activeBtn.querySelector('span').style.color = 'var(--tg-theme-button-color)';
 }
 
+// Обработчик основной кнопки таймера
 async function handleTimerAction() {
     if (isTimerRunning()) {
-        try {
-            const status = await fetch(`${API}/status/${currentUser.username}`).then(r => r.json());
-            
-            if (status.remainingTime <= 0) {
-                showConfirmation('Завершить таймер и получить награду?', claimTime);
-            } else {
-                showNotification('Таймер еще не завершен! Дождитесь окончания.', 'error');
-                triggerHapticFeedback('error');
-            }
-        } catch (error) {
-            console.error('Timer check error:', error);
-            showNotification('Ошибка проверки таймера', 'error');
+        const status = await fetch(`${API}/status/${currentUser.username}`).then(r => r.json());
+        
+        if (status.remainingTime <= 0) {
+            showConfirmation('Завершить таймер и получить награду?', claimTime);
+        } else {
+            showNotification('Таймер еще не завершен! Дождитесь окончания.', 'error');
+            triggerHapticFeedback('error');
         }
     } else {
         showConfirmation(`Запустить ${currentTimerMode === '24Hours' ? '24-часовой' : '160-часовой'} таймер?`, startTimer);
     }
 }
 
+// Переключение режимов таймера
 function switchTimerMode(mode) {
     if (isTimerRunning()) {
         showNotification('Нельзя менять режим во время работы таймера', 'error');
@@ -212,15 +184,18 @@ function switchTimerMode(mode) {
     timerModeLabel.textContent = mode === '24Hours' ? '24-часовой режим' : '160-часовой режим';
 }
 
+// Обновление UI переключателей
 function updateTimerModeUI() {
     switchTo24Hours.classList.toggle('active', currentTimerMode === '24Hours');
     switchTo160Hours.classList.toggle('active', currentTimerMode === '160Hours');
 }
 
+// Проверка работает ли таймер
 function isTimerRunning() {
     return timerElement.classList.contains('running');
 }
 
+// Загрузка данных пользователя
 async function loadUserData() {
     try {
         const [status, leaders] = await Promise.all([
@@ -244,22 +219,21 @@ async function loadUserData() {
     } catch (error) {
         console.error('Ошибка загрузки данных:', error);
         showNotification('Ошибка загрузки данных', 'error');
-        
-        // Fallback данные
-        updateTimerDisplay(0, 0, false);
-        updateLeaderboard([]);
     }
 }
 
+// Обновление статистики пользователя
 function updateUserStats(status) {
     levelElement.textContent = status.level || 1;
     userRankElement.textContent = status.rank || '-';
     
+    // Обновление прогресса XP
     const xpPercentage = Math.min((status.xp / status.xpToNextLevel) * 100, 100);
     xpProgressElement.textContent = `${status.xp}/${status.xpToNextLevel} XP`;
     xpFillElement.style.width = `${xpPercentage}%`;
 }
 
+// Обновление отображения таймера
 function updateTimerDisplay(accumulatedTime, remainingTime, isRunning) {
     const totalTime = TIMER_DURATIONS[currentTimerMode];
     const progress = isRunning ? ((totalTime - remainingTime) / totalTime) * 100 : 0;
@@ -281,10 +255,13 @@ function updateTimerDisplay(accumulatedTime, remainingTime, isRunning) {
     }
     
     globalTimerElement.textContent = formatTime(accumulatedTime);
+    
+    // Обновление времени текущего сеанса
     const sessionTime = isRunning ? totalTime - remainingTime : 0;
     sessionTimerElement.textContent = formatTime(sessionTime);
 }
 
+// Опрос статуса таймера
 function startPolling() {
     if (pollingInterval) clearInterval(pollingInterval);
     pollingInterval = setInterval(async () => {
@@ -307,17 +284,15 @@ function startPolling() {
             console.error('Ошибка опроса:', error);
             clearInterval(pollingInterval);
         }
-    }, 5000);
+    }, 1000);
 }
 
+// Запуск таймера
 async function startTimer() {
     try {
         const response = await fetch(`${API}/start`, {
             method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
                 username: currentUser.username,
                 duration: TIMER_DURATIONS[currentTimerMode]
@@ -329,16 +304,15 @@ async function startTimer() {
             showNotification('Таймер запущен!', 'success');
             triggerHapticFeedback('light');
         } else {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Ошибка сервера');
+            throw new Error('Ошибка сервера');
         }
     } catch (error) {
         console.error('Ошибка запуска таймера:', error);
-        showNotification(`Ошибка: ${error.message}`, 'error');
-        triggerHapticFeedback('error');
+        showNotification('Ошибка запуска таймера', 'error');
     }
 }
 
+// Завершение таймера
 async function claimTime() {
     try {
         const status = await fetch(`${API}/status/${currentUser.username}`).then(r => r.json());
@@ -369,6 +343,7 @@ async function claimTime() {
     }
 }
 
+// Загрузка таблицы лидеров
 async function loadLeaderboard() {
     try {
         const [leaders, userPosition] = await Promise.all([
@@ -381,27 +356,23 @@ async function loadLeaderboard() {
     } catch (error) {
         console.error('Ошибка загрузки лидеров:', error);
         showNotification('Ошибка загрузки таблицы лидеров', 'error');
-        updateLeaderboard([]);
     }
 }
 
+// Обновление таблицы лидеров
 function updateLeaderboard(leaders) {
-    if (!leaders || leaders.length === 0) {
-        leaders = [
-            { username: "Пример1", accumulatedTime: 86400000 },
-            { username: "Пример2", accumulatedTime: 43200000 }
-        ];
-    }
-    
-    leaderboard.innerHTML = leaders.map((user, index) => `
-        <li>
-            <span class="leader-position">${index + 1}.</span>
-            <span class="leader-name">${user.username || 'Аноним'}</span>
-            <span class="leader-time">${formatTime(user.accumulatedTime || 0)}</span>
-        </li>
-    `).join('');
+    leaderboard.innerHTML = leaders && leaders.length > 0
+        ? leaders.map((user, index) => `
+            <li>
+                <span class="leader-position">${index + 1}.</span>
+                <span class="leader-name">${user.username || 'Аноним'}</span>
+                <span class="leader-time">${formatTime(user.accumulatedTime || 0)}</span>
+            </li>
+        `).join('')
+        : '<li class="empty">Пока никто не участвовал</li>';
 }
 
+// Обновление позиции пользователя
 function updateUserPosition(position) {
     if (position && position.rank) {
         userPositionElement.innerHTML = `
@@ -413,6 +384,7 @@ function updateUserPosition(position) {
     }
 }
 
+// Загрузка страницы друзей
 async function loadFriendsPage() {
     try {
         const response = await fetch(`${API}/referrals/${currentUser.username}`);
@@ -426,6 +398,7 @@ async function loadFriendsPage() {
     }
 }
 
+// Отображение страницы друзей
 function renderFriendsPage(data) {
     pendingBonusElement.textContent = formatTime(data.pendingBonus || 0);
     totalEarnedElement.textContent = formatTime(data.totalEarned || 0);
@@ -449,6 +422,7 @@ function renderFriendsPage(data) {
         nextClaimInfo.style.display = 'flex';
     }
     
+    // Обновление списка рефералов
     if (data.referrals.length > 0) {
         referralsContainer.classList.remove('empty-state');
         referralsContainer.innerHTML = `
@@ -472,12 +446,14 @@ function renderFriendsPage(data) {
         `;
     }
     
+    // Обновление реферальной ссылки
     const referralLink = document.getElementById('referralLink');
     if (referralLink) {
         referralLink.value = generateReferralLink();
     }
 }
 
+// Загрузка страницы заданий
 async function loadTasksPage() {
     try {
         const response = await fetch(`${API}/tasks/${currentUser.username}`);
@@ -491,6 +467,7 @@ async function loadTasksPage() {
     }
 }
 
+// Отображение страницы заданий
 function renderTasksPage(data) {
     taskList.innerHTML = data.tasks.map(task => `
         <li class="task-item ${task.completed ? 'completed' : ''}">
@@ -519,6 +496,7 @@ function renderTasksPage(data) {
     `).join('');
 }
 
+// Генерация реферальной ссылки
 function generateReferralLink() {
     if (!currentUser?.referralCode) return 'Загрузка...';
     
@@ -531,6 +509,31 @@ function generateReferralLink() {
     return `https://t.me/bigdik30cm_bot?start=ref_${currentUser.referralCode}`;
 }
 
+// Получение реферального бонуса
+async function claimReferralBonus() {
+    try {
+        const response = await fetch(`${API}/claim-referral-bonus`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: currentUser.username })
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            showNotification(`Получено +${formatTime(result.bonus)}!`, 'success');
+            triggerHapticFeedback('success');
+            loadFriendsPage();
+            loadUserData();
+        } else {
+            throw new Error('Ошибка сервера');
+        }
+    } catch (error) {
+        console.error('Ошибка получения бонуса:', error);
+        showNotification('Ошибка получения бонуса', 'error');
+    }
+}
+
+// Глобальные функции для HTML
 window.copyReferralLink = function() {
     const input = document.getElementById('referralLink');
     input.select();
@@ -550,6 +553,7 @@ window.shareReferralLink = function() {
     }
 };
 
+// Форматирование времени
 function formatTime(ms) {
     const totalSeconds = Math.floor(ms / 1000);
     const hours = Math.floor(totalSeconds / 3600);
@@ -565,16 +569,19 @@ function formatSeconds(seconds) {
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 }
 
+// Блокировка переключателей при работе таймера
 function disableTimerModeSwitcher() {
     switchTo24Hours.disabled = true;
     switchTo160Hours.disabled = true;
 }
 
+// Разблокировка переключателей
 function enableTimerModeSwitcher() {
     switchTo24Hours.disabled = false;
     switchTo160Hours.disabled = false;
 }
 
+// Обновление темы Telegram
 function updateTelegramTheme() {
     if (!window.Telegram?.WebApp) return;
     
@@ -587,12 +594,14 @@ function updateTelegramTheme() {
     document.documentElement.style.setProperty('--tg-theme-hint-color', theme.hint_color || '#aaaaaa');
 }
 
+// Тактильная отдача
 function triggerHapticFeedback(type) {
     if (window.Telegram?.WebApp?.HapticFeedback) {
         Telegram.WebApp.HapticFeedback.impactOccurred(type);
     }
 }
 
+// Получение реферального кода из URL
 function getReferralCodeFromUrl() {
     if (window.Telegram?.WebApp) {
         const startParam = Telegram.WebApp.initDataUnsafe.start_param;
@@ -603,6 +612,7 @@ function getReferralCodeFromUrl() {
     return null;
 }
 
+// Показ уведомлений
 function showNotification(message, type) {
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
@@ -618,6 +628,7 @@ function showNotification(message, type) {
     }, 3000);
 }
 
+// Подтверждение действий
 function showConfirmation(message, callback) {
     if (window.Telegram?.WebApp) {
         Telegram.WebApp.showConfirm(message, (confirmed) => {
