@@ -245,7 +245,7 @@ function updateUserStats(status) {
     
     // Обновление прогресса XP
     const xpPercentage = Math.min((status.xp / status.xpToNextLevel) * 100, 100);
-    xpProgressElement.textContent = `${status.xp}/${status.xpToNextLevel} XP`;
+    xpProgressElement.textContent = `${status.xp || 0}/${status.xpToNextLevel || 1000} XP`;
     xpFillElement.style.width = `${xpPercentage}%`;
 }
 
@@ -347,6 +347,7 @@ async function startTimer() {
             startPolling();
             showNotification('Таймер запущен!', 'success');
             triggerHapticFeedback('light');
+            loadTasksPage(); // Обновляем страницу заданий
         } else {
             throw new Error('Ошибка сервера');
         }
@@ -378,6 +379,7 @@ async function claimTime() {
             showNotification(`Получено ${formatTime(data.earned)}!`, 'success');
             triggerHapticFeedback('success');
             loadUserData();
+            loadTasksPage(); // Обновляем страницу заданий
         } else {
             throw new Error('Ошибка сервера');
         }
@@ -388,38 +390,18 @@ async function claimTime() {
 }
 
 // Загрузка таблицы лидеров
-function loadLeaderboard() {
-  fetch('/api/leaderboard')
-    .then(response => response.json())
-    .then(data => {
-      const leaderboardList = document.getElementById('leaderboard');
-      const userPositionDiv = document.getElementById('userPosition');
-
-      leaderboardList.innerHTML = '';
-
-      let currentUserTopPosition = null;
-
-      data.forEach((user, index) => {
-        const listItem = document.createElement('li');
-        listItem.textContent = `${index + 1}. ${user.first_name} — ${user.totalXP} XP`;
-        leaderboardList.appendChild(listItem);
-
-        if (user.telegramId === userData.id) {
-          currentUserTopPosition = index + 1;
-        }
-      });
-
-      if (userPositionDiv) {
-        userPositionDiv.innerHTML = `<span>Ваша позиция: ${currentUserTopPosition !== null ? currentUserTopPosition : '—'}</span>`;
-      }
-    })
-    .catch(error => {
-      console.error('Ошибка загрузки лидерборда:', error);
-      const userPositionDiv = document.getElementById('userPosition');
-      if (userPositionDiv) {
-        userPositionDiv.innerHTML = `<span>Ошибка загрузки позиции</span>`;
-      }
-    });
+async function loadLeaderboard() {
+    try {
+        const response = await fetch(`${API}/leaders`);
+        if (!response.ok) throw new Error('Ошибка загрузки');
+        
+        const leaders = await response.json();
+        updateLeaderboard(leaders);
+        await updateUserPosition();
+    } catch (error) {
+        console.error('Ошибка загрузки лидерборда:', error);
+        showNotification('Ошибка загрузки таблицы лидеров', 'error');
+    }
 }
 
 // Загрузка страницы друзей
@@ -517,7 +499,8 @@ function renderTasksPage(data) {
                     <span>${task.progress}/${task.required}</span>
                 </div>
             </div>
-            <button class="claim-task-btn" ${task.canClaim ? '' : 'disabled'}>
+            <button class="claim-task-btn" ${task.canClaim ? '' : 'disabled'}
+                    onclick="claimTaskReward('${task.title}', ${task.reward})">
                 ${task.reward} XP
             </button>
         </li>
@@ -570,6 +553,33 @@ async function claimReferralBonus() {
         showNotification('Ошибка получения бонуса', 'error');
     }
 }
+
+// Получение награды за задание
+window.claimTaskReward = async function(taskTitle, reward) {
+    try {
+        const response = await fetch(`${API}/claim-task`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                username: currentUser.username,
+                taskTitle: taskTitle
+            })
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            showNotification(`Получено +${reward} XP!`, 'success');
+            triggerHapticFeedback('success');
+            loadTasksPage();
+            loadUserData();
+        } else {
+            throw new Error('Ошибка сервера');
+        }
+    } catch (error) {
+        console.error('Ошибка получения награды:', error);
+        showNotification(error.message || 'Ошибка получения награды', 'error');
+    }
+};
 
 // Глобальные функции для HTML
 window.copyReferralLink = function() {
