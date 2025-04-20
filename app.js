@@ -384,20 +384,45 @@ async function claimTime() {
 }
 
 // Загрузка таблицы лидеров
-async function loadLeaderboard() {
-    try {
-        const [leaders, userPosition] = await Promise.all([
-            fetch(`${API}/leaders`).then(r => r.json()),
-            fetch(`${API}/user-position/${currentUser.username}`).then(r => r.json())
-        ]);
-        
-        updateLeaderboard(leaders);
-        updateUserPosition(userPosition);
-    } catch (error) {
-        console.error('Ошибка загрузки лидеров:', error);
-        showNotification('Ошибка загрузки таблицы лидеров', 'error');
-    }
+function loadLeaderboard() {
+  fetch('/api/leaderboard')
+    .then(response => response.json())
+    .then(data => {
+      const leaderboardList = document.getElementById('leaderboard');
+      const userRankSpan = document.getElementById('userRank');
+      const userPositionDiv = document.getElementById('userPosition');
+
+      leaderboardList.innerHTML = '';
+
+      let currentUserTopPosition = null;
+
+      data.forEach((user, index) => {
+        const listItem = document.createElement('li');
+        listItem.textContent = `${index + 1}. ${user.first_name} — ${user.totalXP} XP`;
+        leaderboardList.appendChild(listItem);
+
+        if (user.telegramId === userData.id) {
+          currentUserTopPosition = index + 1;
+        }
+      });
+
+      if (userRankSpan) {
+        userRankSpan.textContent = currentUserTopPosition !== null ? currentUserTopPosition : '—';
+      }
+
+      if (userPositionDiv) {
+        userPositionDiv.innerHTML = `<span>Ваша позиция: ${currentUserTopPosition !== null ? currentUserTopPosition : '—'}</span>`;
+      }
+    })
+    .catch(error => {
+      console.error('Ошибка загрузки лидерборда:', error);
+      const userPositionDiv = document.getElementById('userPosition');
+      if (userPositionDiv) {
+        userPositionDiv.innerHTML = `<span>Ошибка загрузки позиции</span>`;
+      }
+    });
 }
+
 
 // Загрузка страницы друзей
 async function loadFriendsPage() {
