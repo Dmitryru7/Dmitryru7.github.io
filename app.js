@@ -16,7 +16,6 @@ const switchTo160Hours = document.getElementById('switchTo160Hours');
 const navbarButtons = document.querySelectorAll('.nav-button');
 const leaderboard = document.getElementById('leaderboard');
 const userPositionElement = document.getElementById('userPosition');
-const userRankElement = document.getElementById('userRank');
 const referralsCountElements = document.querySelectorAll('#referralsCount');
 const pendingBonusElement = document.getElementById('pendingBonus');
 const totalEarnedElement = document.getElementById('totalEarned');
@@ -215,29 +214,34 @@ async function updateUserPosition() {
         if (!response.ok) throw new Error('Ошибка загрузки позиции');
         
         const position = await response.json();
+        const rank = position.rank || 0;
+        const rankText = rank > 0 ? rank : '-';
         
-        if (position) {
-            const rank = position.rank || 'не в топе';
+        document.querySelectorAll('.user-rank-display').forEach(el => {
+            el.textContent = rankText;
+        });
+        
+        if (userPositionElement) {
             userPositionElement.innerHTML = `
-                <span>Ваша позиция: <strong>${rank}</strong></span>
+                <span>Ваша позиция: <strong>${rankText}</strong></span>
                 ${position.accumulatedTime ? `<span class="position-time">${formatTime(position.accumulatedTime)}</span>` : ''}
             `;
-            userRankElement.textContent = rank !== 'не в топе' ? rank : '-';
-        } else {
-            userPositionElement.innerHTML = '<span>Ваша позиция: не в топе</span>';
-            userRankElement.textContent = '-';
         }
+        
     } catch (error) {
         console.error('Ошибка загрузки позиции:', error);
-        userPositionElement.innerHTML = '<span>Ваша позиция: не в топе</span>';
-        userRankElement.textContent = '-';
+        document.querySelectorAll('.user-rank-display').forEach(el => {
+            el.textContent = '-';
+        });
+        if (userPositionElement) {
+            userPositionElement.innerHTML = '<span>Ваша позиция: -</span>';
+        }
     }
 }
 
 // Обновление статистики пользователя
 function updateUserStats(status) {
     levelElement.textContent = status.level || 1;
-    userRankElement.textContent = status.rank !== undefined ? status.rank : '-';
     
     // Обновление прогресса XP
     const xpPercentage = Math.min((status.xp / status.xpToNextLevel) * 100, 100);
@@ -250,7 +254,8 @@ async function loadUserData() {
     try {
         const [status, leaders] = await Promise.all([
             fetch(`${API}/status/${currentUser.username}`).then(r => r.json()),
-            fetch(`${API}/leaders`).then(r => r.json())
+            fetch(`${API}/leaders`).then(r => r.json()),
+            updateUserPosition()
         ]);
         
         updateTimerDisplay(
@@ -264,7 +269,6 @@ async function loadUserData() {
         }
         
         updateLeaderboard(leaders);
-        updateUserPosition();
         updateUserStats(status);
         
     } catch (error) {
@@ -389,7 +393,6 @@ function loadLeaderboard() {
     .then(response => response.json())
     .then(data => {
       const leaderboardList = document.getElementById('leaderboard');
-      const userRankSpan = document.getElementById('userRank');
       const userPositionDiv = document.getElementById('userPosition');
 
       leaderboardList.innerHTML = '';
@@ -406,10 +409,6 @@ function loadLeaderboard() {
         }
       });
 
-      if (userRankSpan) {
-        userRankSpan.textContent = currentUserTopPosition !== null ? currentUserTopPosition : '—';
-      }
-
       if (userPositionDiv) {
         userPositionDiv.innerHTML = `<span>Ваша позиция: ${currentUserTopPosition !== null ? currentUserTopPosition : '—'}</span>`;
       }
@@ -422,7 +421,6 @@ function loadLeaderboard() {
       }
     });
 }
-
 
 // Загрузка страницы друзей
 async function loadFriendsPage() {
