@@ -195,6 +195,55 @@ function isTimerRunning() {
     return timerElement.classList.contains('running');
 }
 
+// Обновление таблицы лидеров
+function updateLeaderboard(leaders) {
+    leaderboard.innerHTML = leaders && leaders.length > 0
+        ? leaders.map((user, index) => `
+            <li>
+                <span class="leader-position">${index + 1}.</span>
+                <span class="leader-name">${user.username || 'Аноним'}</span>
+                <span class="leader-time">${formatTime(user.accumulatedTime || 0)}</span>
+            </li>
+        `).join('')
+        : '<li class="empty">Пока никто не участвовал</li>';
+}
+
+// Обновление позиции пользователя
+async function updateUserPosition() {
+    try {
+        const response = await fetch(`${API}/user-position/${currentUser.username}`);
+        if (!response.ok) throw new Error('Ошибка загрузки позиции');
+        
+        const position = await response.json();
+        
+        if (position && position.rank) {
+            userPositionElement.innerHTML = `
+                <span>Ваша позиция: <strong>${position.rank}</strong></span>
+                <span class="position-time">${formatTime(position.accumulatedTime)}</span>
+            `;
+            userRankElement.textContent = position.rank;
+        } else {
+            userPositionElement.innerHTML = '<span>Ваша позиция: не в топе</span>';
+            userRankElement.textContent = '-';
+        }
+    } catch (error) {
+        console.error('Ошибка загрузки позиции:', error);
+        userPositionElement.innerHTML = '<span>Ошибка загрузки позиции</span>';
+        userRankElement.textContent = '-';
+    }
+}
+
+// Обновление статистики пользователя
+function updateUserStats(status) {
+    levelElement.textContent = status.level || 1;
+    userRankElement.textContent = status.rank || '-';
+    
+    // Обновление прогресса XP
+    const xpPercentage = Math.min((status.xp / status.xpToNextLevel) * 100, 100);
+    xpProgressElement.textContent = `${status.xp}/${status.xpToNextLevel} XP`;
+    xpFillElement.style.width = `${xpPercentage}%`;
+}
+
 // Загрузка данных пользователя
 async function loadUserData() {
     try {
@@ -214,23 +263,13 @@ async function loadUserData() {
         }
         
         updateLeaderboard(leaders);
+        updateUserPosition();
         updateUserStats(status);
         
     } catch (error) {
         console.error('Ошибка загрузки данных:', error);
         showNotification('Ошибка загрузки данных', 'error');
     }
-}
-
-// Обновление статистики пользователя
-function updateUserStats(status) {
-    levelElement.textContent = status.level || 1;
-    userRankElement.textContent = status.rank || '-';
-    
-    // Обновление прогресса XP
-    const xpPercentage = Math.min((status.xp / status.xpToNextLevel) * 100, 100);
-    xpProgressElement.textContent = `${status.xp}/${status.xpToNextLevel} XP`;
-    xpFillElement.style.width = `${xpPercentage}%`;
 }
 
 // Обновление отображения таймера
@@ -356,31 +395,6 @@ async function loadLeaderboard() {
     } catch (error) {
         console.error('Ошибка загрузки лидеров:', error);
         showNotification('Ошибка загрузки таблицы лидеров', 'error');
-    }
-}
-
-// Обновление таблицы лидеров
-function updateLeaderboard(leaders) {
-    leaderboard.innerHTML = leaders && leaders.length > 0
-        ? leaders.map((user, index) => `
-            <li>
-                <span class="leader-position">${index + 1}.</span>
-                <span class="leader-name">${user.username || 'Аноним'}</span>
-                <span class="leader-time">${formatTime(user.accumulatedTime || 0)}</span>
-            </li>
-        `).join('')
-        : '<li class="empty">Пока никто не участвовал</li>';
-}
-
-// Обновление позиции пользователя
-function updateUserPosition(position) {
-    if (position && position.rank) {
-        userPositionElement.innerHTML = `
-            <span>Ваша позиция: <strong>${position.rank}</strong></span>
-            <span class="position-time">${formatTime(position.accumulatedTime)}</span>
-        `;
-    } else {
-        userPositionElement.innerHTML = '<span>Ваша позиция: не в топе</span>';
     }
 }
 
