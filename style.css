@@ -850,3 +850,15 @@ body.desktop .navbar {
     margin-top: 20px;
     border-radius: var(--border-radius);
 }
+
+.user-rank-display {
+    color: var(--accent-color);
+    font-weight: bold;
+}
+
+.position-time {
+    display: block;
+    font-size: 0.8rem;
+    opacity: 0.8;
+    margin-top: 3px;
+}
