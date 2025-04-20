@@ -216,19 +216,20 @@ async function updateUserPosition() {
         
         const position = await response.json();
         
-        if (position && position.rank) {
+        if (position) {
+            const rank = position.rank || 'не в топе';
             userPositionElement.innerHTML = `
-                <span>Ваша позиция: <strong>${position.rank}</strong></span>
-                <span class="position-time">${formatTime(position.accumulatedTime)}</span>
+                <span>Ваша позиция: <strong>${rank}</strong></span>
+                ${position.accumulatedTime ? `<span class="position-time">${formatTime(position.accumulatedTime)}</span>` : ''}
             `;
-            userRankElement.textContent = position.rank;
+            userRankElement.textContent = rank !== 'не в топе' ? rank : '-';
         } else {
             userPositionElement.innerHTML = '<span>Ваша позиция: не в топе</span>';
             userRankElement.textContent = '-';
         }
     } catch (error) {
         console.error('Ошибка загрузки позиции:', error);
-        userPositionElement.innerHTML = '<span>Ошибка загрузки позиции</span>';
+        userPositionElement.innerHTML = '<span>Ваша позиция: не в топе</span>';
         userRankElement.textContent = '-';
     }
 }
@@ -236,7 +237,7 @@ async function updateUserPosition() {
 // Обновление статистики пользователя
 function updateUserStats(status) {
     levelElement.textContent = status.level || 1;
-    userRankElement.textContent = status.rank || '-';
+    userRankElement.textContent = status.rank !== undefined ? status.rank : '-';
     
     // Обновление прогресса XP
     const xpPercentage = Math.min((status.xp / status.xpToNextLevel) * 100, 100);
