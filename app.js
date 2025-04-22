@@ -557,26 +557,36 @@ async function claimReferralBonus() {
 // Получение награды за задание
 window.claimTaskReward = async function(taskTitle, reward) {
     try {
+        console.log('Попытка получить награду за задание:', taskTitle); // Добавлено
         const response = await fetch(`${API}/claim-task`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Accept': 'application/json' // Добавлено
+            },
             body: JSON.stringify({ 
                 username: currentUser.username,
                 taskTitle: taskTitle
             })
         });
         
-        if (response.ok) {
-            const result = await response.json();
-            showNotification(`Получено +${reward} XP!`, 'success');
-            triggerHapticFeedback('success');
-            loadTasksPage();
-            loadUserData();
-        } else {
-            throw new Error('Ошибка сервера');
+        console.log('Ответ сервера:', response); // Добавлено
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error('Детали ошибки:', errorData); // Добавлено
+            throw new Error(errorData.message || 'Ошибка сервера');
         }
+
+        const result = await response.json();
+        console.log('Результат получения награды:', result); // Добавлено
+        
+        showNotification(`Получено +${reward} XP!`, 'success');
+        triggerHapticFeedback('success');
+        loadTasksPage();
+        loadUserData();
     } catch (error) {
-        console.error('Ошибка получения награды:', error);
+        console.error('Полная ошибка:', error); // Добавлено
         showNotification(error.message || 'Ошибка получения награды', 'error');
     }
 };
