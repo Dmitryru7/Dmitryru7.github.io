@@ -557,36 +557,42 @@ async function claimReferralBonus() {
 // Получение награды за задание
 window.claimTaskReward = async function(taskTitle, reward) {
     try {
-        console.log('Попытка получить награду за задание:', taskTitle); // Добавлено
+        console.log(`Пытаемся получить награду за задание: ${taskTitle}`);
+        
         const response = await fetch(`${API}/claim-task`, {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
-                'Accept': 'application/json' // Добавлено
+                'Accept': 'application/json'
             },
             body: JSON.stringify({ 
                 username: currentUser.username,
                 taskTitle: taskTitle
             })
         });
-        
-        console.log('Ответ сервера:', response); // Добавлено
-        
-        if (!response.ok) {
-            const errorData = await response.json();
-            console.error('Детали ошибки:', errorData); // Добавлено
-            throw new Error(errorData.message || 'Ошибка сервера');
+
+        // Проверяем Content-Type ответа
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            console.error('Сервер вернул не JSON:', text);
+            throw new Error(`Сервер вернул неожиданный ответ: ${text.substring(0, 100)}`);
         }
 
-        const result = await response.json();
-        console.log('Результат получения награды:', result); // Добавлено
+        const data = await response.json();
         
+        if (!response.ok) {
+            console.error('Ошибка сервера:', data);
+            throw new Error(data.message || 'Ошибка сервера');
+        }
+
+        console.log('Успешно получена награда:', data);
         showNotification(`Получено +${reward} XP!`, 'success');
         triggerHapticFeedback('success');
         loadTasksPage();
         loadUserData();
     } catch (error) {
-        console.error('Полная ошибка:', error); // Добавлено
+        console.error('Ошибка при получении награды:', error);
         showNotification(error.message || 'Ошибка получения награды', 'error');
     }
 };
