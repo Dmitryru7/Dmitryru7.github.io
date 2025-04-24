@@ -554,6 +554,37 @@ async function claimReferralBonus() {
     }
 }
 
+// Получение XP (новая функция)
+async function claimXP() {
+    try {
+        const response = await fetch(`${API}/claim-xp`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: currentUser.username })
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Ошибка сервера: ${errorText}`);
+        }
+
+        const data = await response.json();
+        
+        // Обновляем интерфейс после успешного получения XP
+        updateUserStats(data);
+        showNotification(`Получено ${data.reward} XP!`, 'success');
+        triggerHapticFeedback('success');
+        
+    } catch (error) {
+        console.error('Ошибка при получении XP:', error);
+        showNotification(error.message || 'Ошибка при получении XP', 'error');
+    }
+}
+
+// Глобальные функции для HTML
+window.copyReferralLink = function() {
+    // ... существующий код ...
+
 // Получение награды за задание
 window.claimTaskReward = async function(taskTitle, reward) {
     try {
