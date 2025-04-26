@@ -581,9 +581,10 @@ async function claimXP() {
     }
 }
 
-// Глобальные функции для HTML
-window.copyReferralLink = function () {
-    // ... существующий код ...
+    // Глобальные функции для HTML
+    window.copyReferralLink = function () {
+        // ... существующий код ...
+    };
 
     // Получение награды за задание
     window.claimTaskReward = async function (taskTitle, reward) {
@@ -628,7 +629,6 @@ window.copyReferralLink = function () {
         }
     };
 
-    // Глобальные функции для HTML
     window.copyReferralLink = function () {
         const input = document.getElementById('referralLink');
         input.select();
@@ -733,4 +733,3 @@ window.copyReferralLink = function () {
             callback();
         }
     }
-}
