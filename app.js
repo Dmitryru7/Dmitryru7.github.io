@@ -258,6 +258,11 @@ async function loadUserData() {
             updateUserPosition()
         ]);
 
+        if (status.isRunning && status.remainingTime <= 0) {
+            status.isRunning = false;
+            await claimTime(); // Автоматически завершаем просроченный таймер
+        }
+
         updateTimerDisplay(
             status.accumulatedTime,
             status.remainingTime,
@@ -301,7 +306,9 @@ function updateTimerDisplay(accumulatedTime, remainingTime, isRunning) {
     globalTimerElement.textContent = formatTime(accumulatedTime);
 
     // Обновление времени текущего сеанса
-    const sessionTime = isRunning ? totalTime - remainingTime : 0;
+    const sessionTime = isRunning 
+    ? Math.min(totalTime, Math.max(0, totalTime - remainingTime)) 
+    : 0;
     sessionTimerElement.textContent = formatTime(sessionTime);
 }
 
