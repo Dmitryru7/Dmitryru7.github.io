@@ -522,7 +522,7 @@ function generateReferralLink() {
     if (!currentUser?.referralCode) return 'Загрузка...';
     
     // Укажите здесь правильный username вашего бота (без @)
-    const botUsername = 'bigdik30cm_bot'; 
+    const botUsername = 'bigdik30cm_bot/bigdik'; 
     const startParam = `ref_${currentUser.referralCode}`;
     
     // Для Telegram WebApp
