@@ -258,9 +258,18 @@ async function loadUserData() {
             updateUserPosition()
         ]);
 
+        // Явно обрабатываем завершенный таймер
         if (status.isRunning && status.remainingTime <= 0) {
             status.isRunning = false;
-            await claimTime(); // Автоматически завершаем просроченный таймер
+            await claimTime();
+            // После завершения заново запрашиваем статус
+            const newStatus = await fetch(`${API}/status/${currentUser.username}`).then(r => r.json());
+            updateTimerDisplay(
+                newStatus.accumulatedTime,
+                0,
+                false
+            );
+            return;
         }
 
         updateTimerDisplay(
@@ -286,30 +295,40 @@ async function loadUserData() {
 function updateTimerDisplay(accumulatedTime, remainingTime, isRunning) {
     const totalTime = TIMER_DURATIONS[currentTimerMode];
     const progress = isRunning ? ((totalTime - remainingTime) / totalTime) * 100 : 0;
-
+    
+    // Добавляем проверку на завершенный таймер
+    const isFinished = isRunning && remainingTime <= 0;
+    
     timerProgress.style.width = `${progress}%`;
-    timerElement.textContent = isRunning ? formatTime(remainingTime) :
-        (currentTimerMode === '24Hours' ? '24:00:00' : '160:00:00');
+    timerElement.textContent = isFinished ? '00:00:00' : 
+        (isRunning ? formatTime(remainingTime) : 
+        (currentTimerMode === '24Hours' ? '24:00:00' : '160:00:00'));
 
-    if (isRunning) {
+    if (isRunning && !isFinished) {
         timerElement.classList.add('running');
         claimButton.innerHTML = '<i class="fas fa-stop"></i> Забрать';
         claimButton.disabled = remainingTime > 0;
         disableTimerModeSwitcher();
     } else {
         timerElement.classList.remove('running');
-        claimButton.innerHTML = '<i class="fas fa-play"></i> Старт';
+        claimButton.innerHTML = isFinished ? '<i class="fas fa-gift"></i> Забрать' : '<i class="fas fa-play"></i> Старт';
         claimButton.disabled = false;
         enableTimerModeSwitcher();
     }
 
+    // Всегда обновляем глобальное время
     globalTimerElement.textContent = formatTime(accumulatedTime);
 
     // Обновление времени текущего сеанса
-    const sessionTime = isRunning 
-    ? Math.min(totalTime, Math.max(0, totalTime - remainingTime)) 
-    : 0;
+    const sessionTime = isRunning && !isFinished 
+        ? Math.min(totalTime, Math.max(0, totalTime - remainingTime))
+        : 0;
     sessionTimerElement.textContent = formatTime(sessionTime);
+    
+    // Если таймер завершен, показываем кнопку "Забрать"
+    if (isFinished) {
+        claimButton.style.display = 'block';
+    }
 }
 
 // Опрос статуса таймера
@@ -318,18 +337,22 @@ function startPolling() {
     pollingInterval = setInterval(async () => {
         try {
             const status = await fetch(`${API}/status/${currentUser.username}`).then(r => r.json());
+            
+            // Добавляем флаг завершения
+            const isFinished = status.isRunning && status.remainingTime <= 0;
+            
             updateTimerDisplay(
                 status.accumulatedTime,
                 status.remainingTime,
                 status.isRunning
             );
 
-            if (!status.isRunning || status.remainingTime <= 0) {
+            if (isFinished) {
                 clearInterval(pollingInterval);
-                if (status.remainingTime <= 0) {
-                    claimButton.disabled = false;
-                    showNotification('Таймер завершен! Нажмите "Забрать" для получения награды', 'success');
-                }
+                claimButton.disabled = false;
+                showNotification('Таймер завершен! Нажмите "Забрать" для получения награды', 'success');
+                // Принудительно обновляем данные пользователя
+                await loadUserData();
             }
         } catch (error) {
             console.error('Ошибка опроса:', error);
