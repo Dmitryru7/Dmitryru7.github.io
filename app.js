@@ -260,7 +260,6 @@ async function loadUserData() {
 
         // Явно обрабатываем завершенный таймер
         if (status.isRunning && status.remainingTime <= 0) {
-            status.isRunning = false;
             await claimTime();
             // После завершения заново запрашиваем статус
             const newStatus = await fetch(`${API}/status/${currentUser.username}`).then(r => r.json());
