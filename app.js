@@ -449,21 +449,32 @@ async function loadFriendsPage() {
 
 // Отображение страницы друзей
 function renderFriendsPage(data) {
-    pendingBonusElement.textContent = formatTime(data.pendingBonus || 0);
-    totalEarnedElement.textContent = formatTime(data.totalEarned || 0);
+    // Обновляем статистику
+    document.getElementById('pendingBonus').textContent = formatTime(data.pendingBonus || 0);
+    document.getElementById('totalEarned').textContent = formatTime(data.totalEarned || 0);
 
-    referralsCountElements.forEach(el => {
+    // Обновляем счетчик рефералов
+    document.querySelectorAll('#referralsCount').forEach(el => {
         el.textContent = data.referrals.length || 0;
     });
 
-    const canClaim = data.canClaim && data.pendingBonus > 0;
-    claimBonusBtn.disabled = !canClaim;
+    // Получаем элементы из HTML
+    const claimBonusBtn = document.getElementById('claimBonusBtn');
+    const nextClaimInfo = document.getElementById('nextClaimInfo');
+    const referralsContainer = document.getElementById('referralsContainer');
 
+    // Проверяем условия для активации кнопки
+    const canClaim = data.canClaim && data.pendingBonus > 0;
+    
+    // Устанавливаем состояние кнопки (используем существующую кнопку из HTML)
+    claimBonusBtn.disabled = !canClaim;
+    claimBonusBtn.classList.toggle('disabled', !canClaim);
+
+    // Обновляем информацию о следующем получении
     if (canClaim) {
-        claimBonusBtn.innerHTML = '<i class="fas fa-gift"></i> Получить 10%';
         nextClaimInfo.style.display = 'none';
     } else {
-        const nextClaimTime = data.nextClaimIn ? formatSeconds(data.nextClaimIn) : '00:00:00';
+        const nextClaimTime = data.nextClaimIn ? formatSeconds(data.nextClaimIn) : '24:00:00';
         nextClaimInfo.innerHTML = `
             <i class="fas fa-clock"></i>
             <span>Следующее получение: <strong>${nextClaimTime}</strong></span>
@@ -471,10 +482,13 @@ function renderFriendsPage(data) {
         nextClaimInfo.style.display = 'flex';
     }
 
-    // Обновление списка рефералов
+    // Обновляем список рефералов
     if (data.referrals.length > 0) {
-        referralsContainer.classList.remove('empty-state');
         referralsContainer.innerHTML = `
+            <div class="referral-list-header">
+                <span>Реферал</span>
+                <span>Заработано</span>
+            </div>
             <ul class="referral-items">
                 ${data.referrals.map(ref => `
                     <li class="referral-item">
@@ -488,18 +502,47 @@ function renderFriendsPage(data) {
             </ul>
         `;
     } else {
-        referralsContainer.classList.add('empty-state');
         referralsContainer.innerHTML = `
-            <i class="fas fa-user-plus"></i>
-            <p>Пригласите друзей и получайте 10% от их времени</p>
+            <div class="empty-state">
+                <i class="fas fa-user-plus"></i>
+                <p>Пригласите друзей и получайте 10% от их времени</p>
+            </div>
         `;
     }
 
-    // Обновление реферальной ссылки
-    const referralLink = document.getElementById('referralLink');
-    if (referralLink) {
-        referralLink.value = generateReferralLink();
-    }
+    // Вешаем обработчик на существующую кнопку из HTML
+    claimBonusBtn.onclick = async function() {
+        if (this.disabled) return;
+        
+        const originalText = this.innerHTML;
+        this.disabled = true;
+        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Обработка...';
+        
+        try {
+            const response = await fetch(`${API}/claim-referral-bonus`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: currentUser.username })
+            });
+
+            const result = await response.json();
+            
+            if (!response.ok) throw new Error(result.message || 'Ошибка сервера');
+
+            showNotification(`Получено ${formatTime(result.bonus)}!`, 'success');
+            triggerHapticFeedback('success');
+            
+            // Обновляем данные
+            await loadFriendsPage();
+            await loadUserData();
+            
+        } catch (error) {
+            console.error('Ошибка получения бонуса:', error);
+            showNotification(error.message || 'Не удалось получить бонус', 'error');
+            claimBonusBtn.disabled = false;
+            claimBonusBtn.innerHTML = originalText;
+        }
+    };
 }
 
 // Загрузка страницы заданий
