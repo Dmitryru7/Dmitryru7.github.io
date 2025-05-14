@@ -590,20 +590,19 @@ function renderTasksPage(data) {
 }
 
 // Генерация реферальной ссылки
+// Генерация реферальной ссылки
 function generateReferralLink() {
-    if (!currentUser?.referralCode) return 'Загрузка...';
-    
-    // Укажите здесь правильный username вашего бота (без @)
-    const botUsername = 'bigdik30cm_bot/bigdik'; 
-    const startParam = `ref_${currentUser.referralCode}`;
-    
-    // Для Telegram WebApp
-    if (window.Telegram?.WebApp) {
-        return `https://t.me/${botUsername}?startapp=${startParam}`;
+    if (!currentUser?.referralCode) {
+        console.error('Referral code not available');
+        return 'Ошибка загрузки';
     }
     
-    // Для обычных ссылок
-    return `https://t.me/${botUsername}?start=${startParam}`;
+    const botUsername = 'bigdik30cm_bot/bigdik'; // Замените на реальный username бота
+    const refCode = `ref_${currentUser.referralCode}`;
+    
+    return window.Telegram?.WebApp 
+        ? `https://t.me/${botUsername}?startapp=${refCode}`
+        : `https://t.me/${botUsername}?start=${refCode}`;
 }
 
 // Получение реферального бонуса
