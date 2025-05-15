@@ -441,6 +441,11 @@ async function loadFriendsPage() {
 
         const data = await response.json();
         renderFriendsPage(data);
+        
+        // Генерация и установка реферальной ссылки
+        const referralLinkInput = document.getElementById('referralLink');
+        referralLinkInput.value = generateReferralLink();
+        
     } catch (error) {
         console.error('Ошибка загрузки друзей:', error);
         showNotification('Ошибка загрузки друзей', 'error');
@@ -597,12 +602,10 @@ function generateReferralLink() {
         return 'Ошибка загрузки';
     }
     
-    const botUsername = 'bigdik30cm_bot/bigdik'; // Замените на реальный username бота
-    const refCode = `ref_${currentUser.referralCode}`;
+    const botUsername = 'bigdik30cm_bot/bigdik'; // Убедитесь, что это правильный username бота
+    const refCode = currentUser.referralCode;
     
-    return window.Telegram?.WebApp 
-        ? `https://t.me/${botUsername}?startapp=${refCode}`
-        : `https://t.me/${botUsername}?start=${refCode}`;
+    return `https://t.me/${botUsername}?start=${refCode}`;
 }
 
 // Получение реферального бонуса
