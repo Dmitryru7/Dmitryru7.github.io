@@ -438,17 +438,23 @@ async function loadFriendsPage() {
     try {
         const response = await fetch(`${API}/referrals/${currentUser.username}`);
         if (!response.ok) throw new Error('Ошибка загрузки');
-
+        
         const data = await response.json();
+        console.log('Referral data:', data); // Для отладки
+        
+        if (!data.referrals) {
+            throw new Error('Некорректные данные рефералов');
+        }
+        
         renderFriendsPage(data);
         
-        // Генерация и установка реферальной ссылки
+        // Сохраняем генерацию реферальной ссылки
         const referralLinkInput = document.getElementById('referralLink');
         referralLinkInput.value = generateReferralLink();
         
     } catch (error) {
         console.error('Ошибка загрузки друзей:', error);
-        showNotification('Ошибка загрузки друзей', 'error');
+        showNotification(error.message || 'Ошибка загрузки рефералов', 'error');
     }
 }
 
