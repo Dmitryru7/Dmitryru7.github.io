@@ -11,8 +11,8 @@ const sessionTimerElement = document.getElementById('sessionTimer');
 const levelElement = document.getElementById('level');
 const xpProgressElement = document.getElementById('xpProgress');
 const xpFillElement = document.getElementById('xpFill');
-const switchTo24Hours = document.getElementById('switchTo24Hours');
-const switchTo160Hours = document.getElementById('switchTo160Hours');
+const switchTo1Min = document.getElementById('switchTo1Min');
+const switchTo2Min = document.getElementById('switchTo2Min');
 const navbarButtons = document.querySelectorAll('.nav-button');
 const leaderboard = document.getElementById('leaderboard');
 const userPositionElement = document.getElementById('userPosition');
@@ -30,10 +30,10 @@ const timerModeLabel = document.getElementById('timerModeLabel');
 // Состояние приложения
 let currentUser = null;
 let pollingInterval = null;
-let currentTimerMode = '24Hours';
+let currentTimerMode = '1Min';
 const TIMER_DURATIONS = {
-    '24Hours': 24 * 60 * 60 * 1000,
-    '160Hours': 160 * 60 * 60 * 1000
+    '1Min': 1 * 1 * 60 * 1000,
+    '2Min': 1 * 2 * 60 * 1000
 };
 
 // Инициализация приложения
@@ -107,8 +107,8 @@ async function initTelegramApp() {
 function initButtons() {
     claimButton.addEventListener('click', handleTimerAction);
 
-    switchTo24Hours.addEventListener('click', () => switchTimerMode('24Hours'));
-    switchTo160Hours.addEventListener('click', () => switchTimerMode('160Hours'));
+    switchTo1Min.addEventListener('click', () => switchTimerMode('1Min'));
+    switchTo2Min.addEventListener('click', () => switchTimerMode('2Min'));
 
     navbarButtons.forEach(button => {
         button.addEventListener('click', () => {
@@ -165,7 +165,7 @@ async function handleTimerAction() {
             triggerHapticFeedback('error');
         }
     } else {
-        showConfirmation(`Запустить ${currentTimerMode === '24Hours' ? '24-часовой' : '160-часовой'} таймер?`, startTimer);
+        showConfirmation(`Запустить ${currentTimerMode === '1Min' ? '24-часовой' : '160-часовой'} таймер?`, startTimer);
     }
 }
 
@@ -178,15 +178,15 @@ function switchTimerMode(mode) {
 
     currentTimerMode = mode;
     updateTimerModeUI();
-    timerElement.textContent = mode === '24Hours' ? '24:00:00' : '160:00:00';
+    timerElement.textContent = mode === '1Min' ? '00:01:00' : '00:02:00';
     timerProgress.style.width = '0%';
-    timerModeLabel.textContent = mode === '24Hours' ? '24-часовой режим' : '160-часовой режим';
+    timerModeLabel.textContent = mode === '1Min' ? 'минутный режим' : '2 минутный режим';
 }
 
 // Обновление UI переключателей
 function updateTimerModeUI() {
-    switchTo24Hours.classList.toggle('active', currentTimerMode === '24Hours');
-    switchTo160Hours.classList.toggle('active', currentTimerMode === '160Hours');
+    switchTo1Min.classList.toggle('active', currentTimerMode === '1Min');
+    switchTo2Min.classList.toggle('active', currentTimerMode === '2Min');
 }
 
 // Проверка работает ли таймер
@@ -301,7 +301,7 @@ function updateTimerDisplay(accumulatedTime, remainingTime, isRunning) {
     timerProgress.style.width = `${progress}%`;
     timerElement.textContent = isFinished ? '00:00:00' : 
         (isRunning ? formatTime(remainingTime) : 
-        (currentTimerMode === '24Hours' ? '24:00:00' : '160:00:00'));
+        (currentTimerMode === '1Min' ? '00:01:00' : '00:02:00'));
 
     if (isRunning && !isFinished) {
         timerElement.classList.add('running');
@@ -750,14 +750,14 @@ async function claimXP() {
 
     // Блокировка переключателей при работе таймера
     function disableTimerModeSwitcher() {
-        switchTo24Hours.disabled = true;
-        switchTo160Hours.disabled = true;
+        switchTo1Min.disabled = true;
+        switchTo2Min.disabled = true;
     }
 
     // Разблокировка переключателей
     function enableTimerModeSwitcher() {
-        switchTo24Hours.disabled = false;
-        switchTo160Hours.disabled = false;
+        switchTo1Min.disabled = false;
+        switchTo2Min.disabled = false;
     }
 
     // Обновление темы Telegram
