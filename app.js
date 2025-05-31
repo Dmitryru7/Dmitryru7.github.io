@@ -165,7 +165,7 @@ async function handleTimerAction() {
             triggerHapticFeedback('error');
         }
     } else {
-        showConfirmation(`Запустить ${currentTimerMode === '1Min' ? '24-часовой' : '160-часовой'} таймер?`, startTimer);
+        showConfirmation(`Запустить ${currentTimerMode === '1Min' ? 'минутный' : '2 минутный'} таймер?`, startTimer);
     }
 }
 
