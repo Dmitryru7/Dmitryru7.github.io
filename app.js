@@ -252,41 +252,66 @@ function updateUserStats(status) {
 // Загрузка данных пользователя
 async function loadUserData() {
     try {
+        // Параллельно загружаем статус и таблицу лидеров
         const [status, leaders] = await Promise.all([
             fetch(`${API}/status/${currentUser.username}`).then(r => r.json()),
             fetch(`${API}/leaders`).then(r => r.json()),
-            updateUserPosition()
+            updateUserPosition() // Обновляем позицию в рейтинге
         ]);
 
-        // Явно обрабатываем завершенный таймер
+        // Обработка автоматического завершения таймера
         if (status.isRunning && status.remainingTime <= 0) {
+            console.log('Обнаружен завершенный таймер, запускаем claimTime()');
             await claimTime();
-            // После завершения заново запрашиваем статус
+            
+            // После завершения загружаем обновленные данные
             const newStatus = await fetch(`${API}/status/${currentUser.username}`).then(r => r.json());
             updateTimerDisplay(
                 newStatus.accumulatedTime,
                 0,
                 false
             );
-            return;
+            return; // Прерываем дальнейшее выполнение
         }
 
+        // Обновляем отображение таймера
         updateTimerDisplay(
             status.accumulatedTime,
             status.remainingTime,
             status.isRunning
         );
 
-        if (status.isRunning) {
+        // Запускаем опрос статуса если таймер активен
+        if (status.isRunning && status.remainingTime > 0) {
             startPolling();
         }
 
+        // Обновляем таблицу лидеров
         updateLeaderboard(leaders);
+
+        // Обновляем статистику пользователя
         updateUserStats(status);
+
+        // Обновляем реферальные данные (если открыта страница друзей)
+        if (document.getElementById('friends').classList.contains('active')) {
+            await loadFriendsPage();
+        }
+
+        // Логирование для отладки
+        console.log('Данные пользователя загружены:', {
+            accumulatedTime: status.accumulatedTime,
+            remainingTime: status.remainingTime,
+            isRunning: status.isRunning,
+            level: status.level
+        });
 
     } catch (error) {
         console.error('Ошибка загрузки данных:', error);
-        showNotification('Ошибка загрузки данных', 'error');
+        showNotification('Ошибка загрузки данных. Попробуйте обновить страницу', 'error');
+        
+        // Восстанавливаем кнопку в случае ошибки
+        claimButton.innerHTML = '<i class="fas fa-play"></i> Старт';
+        claimButton.disabled = false;
     }
 }
 
@@ -389,32 +414,51 @@ async function startTimer() {
 // Завершение таймера
 async function claimTime() {
     try {
+        // Принудительно запрашиваем свежий статус
         const status = await fetch(`${API}/status/${currentUser.username}`).then(r => r.json());
+        
+        if (status.remainingTime <= 0) {
+            // Показываем лоадер
+            claimButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Загрузка...';
+            claimButton.disabled = true;
+            
+            const response = await fetch(`${API}/claim`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    username: currentUser.username,
+                    force: true // Флаг для принудительного завершения
+                }),
+            });
 
-        if (status.remainingTime > 0) {
-            throw new Error('Таймер еще не завершен');
-        }
+            if (!response.ok) throw new Error('Ошибка сервера');
 
-        const response = await fetch(`${API}/claim`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: currentUser.username }),
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            clearInterval(pollingInterval);
-            updateTimerDisplay(data.accumulatedTime, 0, false);
-            showNotification(`Получено ${formatTime(data.earned)}!`, 'success');
-            triggerHapticFeedback('success');
-            loadUserData();
-            loadTasksPage(); // Обновляем страницу заданий
+            const result = await response.json();
+            
+            // Обновляем интерфейс
+            updateTimerDisplay(
+                result.newAccumulatedTime || status.accumulatedTime + (status.timerEndTime - status.startTime),
+                0,
+                false
+            );
+            
+            showNotification(`Получено ${formatTime(result.earned)}!`, 'success');
+            
+            // Обновляем все данные
+            await Promise.all([
+                loadUserData(),
+                loadFriendsPage()
+            ]);
+            
         } else {
-            throw new Error('Ошибка сервера');
+            showNotification('Таймер еще не завершен!', 'error');
         }
     } catch (error) {
         console.error('Ошибка завершения таймера:', error);
         showNotification(error.message || 'Ошибка завершения таймера', 'error');
+    } finally {
+        claimButton.innerHTML = '<i class="fas fa-play"></i> Старт';
+        claimButton.disabled = false;
     }
 }
 
