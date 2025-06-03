@@ -826,14 +826,45 @@ async function claimXP() {
 
     // Получение реферального кода из URL
     function getReferralCodeFromUrl() {
-        if (window.Telegram?.WebApp) {
-            const startParam = Telegram.WebApp.initDataUnsafe.start_param;
-            if (startParam && startParam.startsWith('ref_')) {
-                return startParam.substring(4);
-            }
-        }
+    if (!window.Telegram?.WebApp) {
+        console.log('Telegram WebApp not detected');
         return null;
     }
+
+    try {
+        // 1. Извлекаем start_param из всех возможных источников
+        const initData = Telegram.WebApp.initData 
+            ? new URLSearchParams(Telegram.WebApp.initData)
+            : null;
+        
+        const startParam = initData?.get('start_param') 
+            || Telegram.WebApp.initDataUnsafe?.start_param
+            || null;
+
+        if (!startParam) {
+            console.log('No start_param found in:', {
+                initData: Telegram.WebApp.initData,
+                initDataUnsafe: Telegram.WebApp.initDataUnsafe
+            });
+            return null;
+        }
+
+        // 2. Проверяем формат кода (допустимы: ref_abc123 или nt_code123)
+        const isValidCode = /^(ref|nt)_[a-z0-9]+$/i.test(startParam);
+        
+        if (!isValidCode) {
+            console.warn('Invalid referral code format:', startParam);
+            return null;
+        }
+
+        // 3. Убираем префикс (ref_ или nt_)
+        return startParam.substring(startParam.indexOf('_') + 1);
+
+    } catch (error) {
+        console.error('Error parsing referral code:', error);
+        return null;
+    }
+}
 
     // Показ уведомлений
     function showNotification(message, type) {
